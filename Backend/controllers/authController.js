@@ -127,7 +127,7 @@ async function handleLoginAccount(req, res) {
     // Store JWT in cookie
     res.cookie("authToken", token, {
       httpOnly: true,
-      secure: false, // change to true for HTTPS
+      secure: true, 
       sameSite: "strict",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
