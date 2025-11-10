@@ -215,7 +215,7 @@ async function handleForgetPassword(req, res) {
       { expiresIn: "10m" }
     );
 
-    const resetLink = `${CLIENT_URL}/reset-password/${token}`;
+    const resetLink = `${CLIENT_URL}reset-password/${token}`;
 
     const html = `
       <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
