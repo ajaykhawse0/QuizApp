@@ -3,7 +3,7 @@ const UserModel = require("../models/User");
 const jwt = require("jsonwebtoken");
 const dotenv = require("dotenv");
 const axios = require("axios");
-
+const dns = require('dns');
 dotenv.config();
 
 const JWT_SECRET = process.env.JWT_SECRET;
