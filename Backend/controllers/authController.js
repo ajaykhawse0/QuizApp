@@ -208,15 +208,17 @@ async function handleForgetPassword(req, res) {
       { expiresIn: "10m" }
     );
 
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      secure: true,
+   const transporter = nodemailer.createTransport({
+  host: "smtp.gmail.com",
+  service: "gmail",
+  port: 465,
+  secure: true,
+  auth: {
+    user: process.env.ADMIN_GMAIL,
+    pass: process.env.ADMIN_PASS,
+  },
+});
 
-      auth: {
-        user: process.env.ADMIN_GMAIL,
-        pass: process.env.ADMIN_PASS,
-      },
-    });
 
     const resetLink = `${CLIENT_URL}reset-password/${token}`;
     const reciever = {
