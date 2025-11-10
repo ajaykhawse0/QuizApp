@@ -45,6 +45,10 @@ const handleForgotPassword = async (e) => {
       alert(response.data.message);
     } else {
       alert('Password reset link sent successfully. Check your email.');
+    window.open("https://mail.google.com", "_blank");
+
+ 
+    setForgotEmail('');
     }
 
     setForgotEmail(''); 
