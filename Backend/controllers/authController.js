@@ -2,10 +2,11 @@ const bcrypt = require("bcrypt");
 const UserModel = require("../models/User");
 const jwt = require("jsonwebtoken");
 const dns = require("dns");
-const nodemailer = require("nodemailer");
+
 const saltRounds = 12;
 const dotenv = require("dotenv");
-const resend = require("resend");
+const { Resend } = require("resend");
+
 dotenv.config();
 
 const JWT_SECRET = process.env.JWT_SECRET;
