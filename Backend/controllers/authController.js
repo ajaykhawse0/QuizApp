@@ -1,17 +1,17 @@
 const bcrypt = require("bcrypt");
 const UserModel = require("../models/User");
 const jwt = require("jsonwebtoken");
-const dns = require("dns");
-
-const saltRounds = 12;
 const dotenv = require("dotenv");
-const { Resend } = require("resend");
+const axios = require("axios");
 
 dotenv.config();
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const CLIENT_URL = process.env.CLIENT_URL;
-const resend = new Resend(process.env.RESEND_API_KEY);
+const BREVO_API_KEY = process.env.BREVO_API_KEY;
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
+
+const saltRounds =12;
 
 // -------------------- SIGNUP --------------------
 async function handleCreateAccount(req, res) {
@@ -192,8 +192,15 @@ async function handleForgetPassword(req, res) {
   try {
     const { email } = req.body;
 
+    
     if (!email) {
       return res.status(400).json({ message: "Please provide an email" });
+    }
+
+   
+    if (!BREVO_API_KEY) {
+      console.error("BREVO_API_KEY is not set in environment variables");
+      return res.status(500).json({ message: "Email service configuration error" });
     }
 
     const user = await UserModel.findOne({ email });
@@ -208,7 +215,7 @@ async function handleForgetPassword(req, res) {
       { expiresIn: "10m" }
     );
 
-    const resetLink = `${CLIENT_URL}reset-password/${token}`;
+    const resetLink = `${CLIENT_URL}/reset-password/${token}`;
 
     const html = `
       <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
@@ -221,41 +228,54 @@ async function handleForgetPassword(req, res) {
            Reset Password
         </a>
         <p>This link will expire in <strong>10 minutes</strong>.</p>
-        <p>If you didn’t request a password reset, please ignore this email.</p>
+        <p>If you didn't request a password reset, please ignore this email.</p>
         <br />
         <p>– The Quiz App Team</p>
       </div>
     `;
 
-    // Send email using Resend
-    const response = await resend.emails.send({
-      from: "Quiz App Support <onboarding@resend.dev>",
-      to: email,
-      subject: "Password Reset Request",
-      html,
-    });
+ 
+    const brevoResponse = await axios.post(
+      "https://api.brevo.com/v3/smtp/email",
+      {
+        sender: { 
+          name: "Quiz App Support", 
+          email: ADMIN_EMAIL 
+        },
+        to: [{ email }],
+        subject: "Password Reset Request",
+        htmlContent: html,
+      },
+      {
+        headers: {
+          "api-key": BREVO_API_KEY,  
+          "Content-Type": "application/json",
+        },
+      }
+    );
 
-    if (response.error) {
-      console.error("Resend Email Error:", response.error);
-      return res.status(500).json({
-        message: "Failed to send password reset email",
-        error: response.error,
-      });
-    }
+    console.log("Email sent successfully via Brevo:", brevoResponse.data);
 
     return res.status(200).json({
-      message:
-        "Password reset link sent successfully! It expires in 10 minutes.",
+      message: "Password reset link sent successfully! It expires in 10 minutes.",
     });
+
   } catch (err) {
-    console.error("Error in forget password:", err);
+    console.error("Error in forget password:", err.response?.data || err.message);
+    
+  
+    if (err.response?.status === 401) {
+      return res.status(500).json({
+        message: "Email service authentication failed. Please contact support.",
+      });
+    }
+    
     return res.status(500).json({
       message: "Error processing forgot password request",
       error: err.message,
     });
   }
 }
-
 //--Handle Change Password--
 
 async function handleChangePassword(req, res) {
