@@ -33,9 +33,24 @@ const Signup = () => {
     return '';
   };
 
+   const validateEmail = (email) => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+};
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+      if (!name.trim() || !email.trim() || !password.trim()) {
+    setError('All fields are required');
+    return;
+  }
+
+  if (!validateEmail(email)) {
+    setError('Enter a valid email address');
+    return;
+  }
 
     const validationError = validatePassword(password);
     if (validationError) {
@@ -47,10 +62,8 @@ const Signup = () => {
     const result = await signup(name, email, password);
 
   if (result.success) {
-    const message = 'Account created! A default profile picture has been set. You can change it in your profile.';
-  if (confirm(message + '\n\nClick OK to go to home page.')) {
-    navigate('/login');
-  }
+  alert("Account created Succesfully")
+  navigate("/login");
 }
       
     else setError(result.message);

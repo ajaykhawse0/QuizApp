@@ -25,14 +25,17 @@ async function handleCreateAccount(req, res) {
     }
 
     const domain = email.split("@")[1];
-    dns.resolveMx(domain, (err, add) => {
-      if (err) {
-        return res.status(400).json({
-          message: "Enter a valid email address",
-          error: err,
-        });
+    try{
+        const mxRecords = await dns.promises.resolveMx(domain);
+      if (!mxRecords || mxRecords.length === 0) {
+        return res.status(400).json({ message: "Invalid email domain" });
       }
-    });
+    } catch (err) {
+      return res.status(400).json({
+        message: "Enter a valid email address",
+      });
+    }
+
 
     if (!password || password.length < 8 || password.length > 24) {
       return res
@@ -78,27 +81,22 @@ async function handleCreateAccount(req, res) {
     });
     await newUser.save();
 
-    // Generate JWT token
-    const token = jwt.sign({ name, email }, JWT_SECRET, { expiresIn: "1h" });
+    // // Generate JWT token
+    // const token = jwt.sign({ name, email }, JWT_SECRET, { expiresIn: "1h" });
 
-    // Store token in cookie
-    res.cookie("authToken", token, {
-      httpOnly: true,
-      secure: false,
-      sameSite: "lax",
-      maxAge: 60 * 60 * 1000, // 1 hour
-    });
+    // // Store token in cookie
+    // res.cookie("authToken", token, {
+    //   httpOnly: true,
+    //   secure: false,
+    //   sameSite: "lax",
+    //   maxAge: 60 * 60 * 1000, // 1 hour
+    // });
 
-    return res.status(201).json({
-      message: "Account Created Successfully",
-      token,
-      user: {
-        id: newUser._id,
-        name: newUser.name,
-        email: newUser.email,
-        role: newUser.role,
-      },
-    });
+return res.status(201).json({
+  success: true,
+  message: "Account Created Successfully",
+});
+
   } catch (err) {
     console.error("Error creating account:", err);
     return res.status(500).json({ message: "Server Error" });

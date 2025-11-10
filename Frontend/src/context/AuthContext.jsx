@@ -95,24 +95,22 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const signup = async (name, email, password) => {
-    try {
-      const response = await authAPI.signup({ name, email, password });
-      const { token: newToken, user: userData } = response.data;
-      
-      setToken(newToken);
-      setUser(userData);
-      localStorage.setItem('token', newToken);
-      localStorage.setItem('user', JSON.stringify(userData));
-      
-      return { success: true };
-    } catch (error) {
-      return {
-        success: false,
-        message: error.response?.data?.message || 'Signup failed',
-      };
-    }
-  };
+const signup = async (name, email, password) => {
+  try {
+    const response = await authAPI.signup({ name, email, password });
+
+    
+    return {
+      success: true,
+      message: response.data.message || "Account created successfully",
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: error.response?.data?.message || "Signup failed",
+    };
+  }
+};
 
   const logout = async () => {
     try {
