@@ -5,10 +5,12 @@ const dns = require("dns");
 const nodemailer = require("nodemailer");
 const saltRounds = 12;
 const dotenv = require("dotenv");
+const resend = require("resend");
 dotenv.config();
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const CLIENT_URL = process.env.CLIENT_URL;
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // -------------------- SIGNUP --------------------
 async function handleCreateAccount(req, res) {
@@ -127,7 +129,7 @@ async function handleLoginAccount(req, res) {
     // Store JWT in cookie
     res.cookie("authToken", token, {
       httpOnly: true,
-      secure: true, 
+      secure: true,
       sameSite: "strict",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
@@ -159,7 +161,7 @@ async function handleGetCurrentUser(req, res) {
         name: user.name,
         email: user.email,
         role: user.role,
-        profilePicture:user.profilePicture,
+        profilePicture: user.profilePicture,
       },
     });
   } catch (err) {
@@ -188,63 +190,61 @@ async function handleLogout(req, res) {
 async function handleForgetPassword(req, res) {
   try {
     const { email } = req.body;
-    if (!email) {
-      return res.status(400).json({
-        message: "Please provide a email",
-      });
-    }
-    const user = await UserModel.findOne({ email: email });
 
-    
-    if (!user) {
-      return res.status(400).json({
-        message: "User not found",
-      });
+    if (!email) {
+      return res.status(400).json({ message: "Please provide an email" });
     }
-    // Now we generate a token
+
+    const user = await UserModel.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Generate reset token (expires in 10 min)
     const token = jwt.sign(
       { userId: user._id, email: user.email },
       JWT_SECRET,
       { expiresIn: "10m" }
     );
 
-   const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  service: "gmail",
-  port: 465,
-  secure: true,
-  auth: {
-    user: process.env.ADMIN_GMAIL,
-    pass: process.env.ADMIN_PASS,
-  },
-});
-
-
     const resetLink = `${CLIENT_URL}reset-password/${token}`;
-    const reciever = {
-      from: `"Quiz App Support" <${process.env.ADMIN_GMAIL}>`,
+
+    const html = `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <h2 style="color: #4f46e5;">Password Reset Request</h2>
+        <p>Hi ${user.name || "User"},</p>
+        <p>We received a request to reset your password. Click the link below to reset it:</p>
+        <a href="${resetLink}" 
+           style="display:inline-block; padding:10px 18px; background-color:#4f46e5; color:#fff; 
+                  border-radius:6px; text-decoration:none; font-weight:bold;">
+           Reset Password
+        </a>
+        <p>This link will expire in <strong>10 minutes</strong>.</p>
+        <p>If you didn’t request a password reset, please ignore this email.</p>
+        <br />
+        <p>– The Quiz App Team</p>
+      </div>
+    `;
+
+    // Send email using Resend
+    const response = await resend.emails.send({
+      from: "Quiz App Support <onboarding@resend.dev>",
       to: email,
       subject: "Password Reset Request",
-      html: `
-        <div style="font-family:Arial,sans-serif; line-height:1.5;">
-          <h2>Password Reset Request</h2>
-          <p>Hello ${user.name || "User"},</p>
-          <p>We received a request to reset your password. Click the link below to reset it:</p>
-          <a href="${resetLink}" 
-             style="display:inline-block; padding:10px 15px; background-color:#4f46e5; color:white; 
-                    text-decoration:none; border-radius:6px;">
-             Reset Password
-          </a>
-          <p>This link will expire in 10 minutes.</p>
-          <p>If you didn’t request a password reset, please ignore this email.</p>
-        </div>
-      `,
-    };
+      html,
+    });
 
-    await transporter.sendMail(reciever);
+    if (response.error) {
+      console.error("Resend Email Error:", response.error);
+      return res.status(500).json({
+        message: "Failed to send password reset email",
+        error: response.error,
+      });
+    }
+
     return res.status(200).json({
       message:
-        "Password Reset link Sent Successfully to your Email It will Expire in 10 minutes",
+        "Password reset link sent successfully! It expires in 10 minutes.",
     });
   } catch (err) {
     console.error("Error in forget password:", err);
@@ -303,7 +303,7 @@ async function handleResetPassword(req, res) {
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-        if (!newPassword || newPassword.length < 8 || newPassword.length > 24) {
+    if (!newPassword || newPassword.length < 8 || newPassword.length > 24) {
       return res
         .status(400)
         .json({ error: "Password must be 8–24 characters long" });
@@ -339,13 +339,11 @@ async function handleResetPassword(req, res) {
     const salt = await bcrypt.genSalt(saltRounds);
     const hashedNewPassword = await bcrypt.hash(newPassword, salt);
     user.password = hashedNewPassword;
-    user.passwordLength=passLength;
+    user.passwordLength = passLength;
     await user.save();
 
     return res.status(200).json({ message: "Password reset successfully" });
-  } 
-  
-  catch (e) {
+  } catch (e) {
     console.error("Error in reset password:", e);
     if (e.name === "TokenExpiredError") {
       return res.status(401).json({ message: "Reset link has expired" });
