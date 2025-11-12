@@ -144,7 +144,7 @@ const LeaderboardList = () => {
                           }`}
                         >
                           <div className="flex items-center space-x-3 md:space-x-4 flex-1 min-w-0">
-                            <span className="text-xl md:text-2xl font-bold w-10 md:w-12 text-center flex-shrink-0">
+                            <span className="text-xl md:text-2xl font-bold w-10 md:w-12 text-center flex-shrink-0 dark:text-white">
                               {getRankIcon(index + 1)}
                             </span>
                             <div className="min-w-0 flex-1">

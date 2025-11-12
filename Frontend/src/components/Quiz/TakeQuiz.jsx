@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { quizAPI, resultAPI } from '../../services/api';
 import LoadingSpinner from '../Common/LoadingSpinner';
+import { useRef } from 'react';
 
 const TakeQuiz = () => {
   const { id } = useParams();
@@ -15,7 +16,10 @@ const TakeQuiz = () => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
+  const didRun = useRef(false);
   useEffect(() => {
+    if (didRun.current) return;
+    didRun.current = true;
     fetchQuiz();
   }, [id]);
 
@@ -48,12 +52,19 @@ const TakeQuiz = () => {
       setLoading(true);
       const response = await quizAPI.getById(id);
       setQuiz(response.data.quiz);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load quiz');
-    } finally {
+    }catch (error) {
+      if (error.response?.status === 403) {
+        const { message, daysRemaining, canRetakeAt } = error.response.data;
+        alert(`${message}\nYou can retake this quiz in ${daysRemaining} days.`);
+        navigate('/quizzes');
+      } else {
+        console.error('Error fetching quiz:', error);
+        setError('Failed to load quiz');
+      }}finally {
       setLoading(false);
     }
   };
+
 
   const handleAnswerSelect = (answerIndex) => {
     const newAnswers = [...answers];
@@ -176,8 +187,8 @@ const TakeQuiz = () => {
                 onClick={() => handleAnswerSelect(index)}
                 className={`w-full text-left p-4 rounded-lg border-2 transition ${
                   answers[currentQuestion] === index
-                    ? 'border-primary-600 bg-primary-50 dark:bg-primary-900/20'
-                    : 'border-gray-200 dark:border-gray-700 hover:border-primary-300 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                    ? 'border-primary-600 bg-primary-50 dark:bg-gray-600  '
+                    : 'border-gray-200 dark:border-gray-700 hover:border-primary-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 '
                 }`}
               >
                 <div className="flex items-center">
@@ -192,7 +203,7 @@ const TakeQuiz = () => {
                       <div className="w-2 h-2 rounded-full bg-white" />
                     )}
                   </div>
-                  <span className="text-gray-900 dark:text-gray-100">{option}</span>
+                  <span className="text-gray-900 dark:text-gray-100 ">{option}</span>
                 </div>
               </button>
             ))}
@@ -209,7 +220,7 @@ const TakeQuiz = () => {
             Previous
           </button>
 
-          <div className="flex space-x-2 overflow-x-auto scrollbar-hide">
+          <div className="hidden sm:flex space-x-2 overflow-x-auto scrollbar-hide  ">
             {quiz.questions.map((_, index) => (
               <button
                 key={index}

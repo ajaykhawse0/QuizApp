@@ -33,9 +33,13 @@ const resultSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    completedAt: { type: Date, default: Date.now },
+  
+  nextAttemptAllowedAt: { type: Date }
   },
   { timestamps: true }
 );
+resultSchema.index({ user: 1, quiz: 1, completedAt: -1 });
 
 const Result = mongoose.model("Result", resultSchema);
 module.exports=Result;

@@ -32,6 +32,9 @@ async function handleSubmitQuiz(req,res){
          }
 
          const percentage = (score/total)*100;
+         
+         const nextAttemptDate = new Date();
+    nextAttemptDate.setDate(nextAttemptDate.getDate() + 7);
 
          const result = new Result({
             userId,
@@ -39,12 +42,14 @@ async function handleSubmitQuiz(req,res){
             score,
             total,
             timeTaken:timetaken,
+            completedAt: new Date(),
+            nextAttemptAllowedAt: nextAttemptDate,
             percentage,
-            correctAnswers: answers // Store user's actual answers (field name is misleading but kept for compatibility)  
+            correctAnswers: answers 
          });
          await result.save();
 
-         //progress tracking
+        
             const user = await User.findById(userId);
             user.progress.push({
                 quizId,
@@ -99,17 +104,6 @@ async function handleGetResultsByUser(req,res){
         }
         
         
-    //     const resultList = await Promise.all(
-        
-    //     results.map(result => ({
-    //         quizTitle: result.quizId.title,
-    //         score: result.score,
-    //         total: result.total,
-    //         percentage: result.percentage,
-    //         timeTaken: result.timeTaken,
-    //         submittedAt: result.submittedAt,
-    //     })
-    // ));
 
 
     // Get all unique quiz IDs
@@ -193,6 +187,8 @@ async function handleGetResultById(req, res) {
         if (!isAdmin && result.userId._id.toString() !== userId.toString()) {
             return res.status(403).json({ message: "Access denied" });
         }
+        console.log(result);
+        
 
         // Get detailed question breakdown
         const quiz = await Quiz.findById(result.quizId._id);
@@ -220,6 +216,7 @@ async function handleGetResultById(req, res) {
                 },
                 score: result.score,
                 total: result.total,
+                lasttakenat: result.completedAt,
                 percentage: result.percentage,
                 timeTaken: result.timeTaken,
                 submittedAt: result.submittedAt,
