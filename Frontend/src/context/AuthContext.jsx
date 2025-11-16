@@ -16,42 +16,30 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState(localStorage.getItem('token'));
 
-  useEffect(() => {
-    const initializeAuth = async () => {
-      const storedUser = localStorage.getItem('user');
-      const storedToken = localStorage.getItem('token');
-      
-      if (storedUser && storedToken) {
-        try {
-          const parsedUser = JSON.parse(storedUser);
-          setUser(parsedUser);
-          setToken(storedToken);
-          
-          // Verify user info with backend
-          try {
-            const response = await authAPI.getCurrentUser();
-            if (response.data.user) {
-              const updatedUser = response.data.user;
-              setUser(updatedUser);
-              localStorage.setItem('user', JSON.stringify(updatedUser));
-            }
-          } catch (err) {
-            // Token might be invalid, clear storage
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            setUser(null);
-            setToken(null);
-          }
-        } catch (e) {
-          localStorage.removeItem('user');
-          localStorage.removeItem('token');
-        }
+useEffect(() => {
+  const initializeAuth = async () => {
+    try {
+      const response = await authAPI.getCurrentUser();
+
+      if (response.data.user) {
+        setUser(response.data.user);
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+      } else {
+        setUser(null);
+        localStorage.removeItem('user');
       }
-      setLoading(false);
-    };
-    
-    initializeAuth();
-  }, []);
+    } catch (err) {
+      setUser(null);
+      localStorage.removeItem('user');
+    }
+
+    setLoading(false);
+  };
+
+  initializeAuth();
+}, []);
+
+
 
   const login = async (email, password) => {
     try {

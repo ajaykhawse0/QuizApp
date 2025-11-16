@@ -10,6 +10,20 @@ const QuizList = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+   useEffect(() => {
+  const url = new URL(window.location.href);
+  const token = url.searchParams.get("token");
+
+  if (token) {
+    localStorage.setItem("token", token);
+
+    // Remove token from URL
+    window.history.replaceState({}, "", "/");
+
+    window.location.reload(); // reload AuthProvider
+  }
+}, []);
+
   useEffect(() => {
     fetchAllQuizzes();
   }, []);

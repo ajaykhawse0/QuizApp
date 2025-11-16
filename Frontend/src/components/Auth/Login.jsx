@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
 import { authAPI } from '../../services/api';
+import GoogleLoginButton from './GoogleLoginButton';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -226,7 +227,11 @@ const handleForgotPassword = async (e) => {
                 )}
               </button>
             </div>
+            <p className="text-center text-gray-500 dark:text-gray-400 py-2">or </p>
+           
+            <GoogleLoginButton />
           </form>
+     
         ) : (
           // 🔹 Forgot Password Form
           <form className="space-y-6" onSubmit={handleForgotPassword}>

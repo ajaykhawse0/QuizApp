@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Eye, EyeOff } from 'lucide-react'; 
-
+import GoogleLoginButton from './GoogleLoginButton';
 const Signup = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -223,19 +223,12 @@ const Signup = () => {
                 'Sign Up'
               )}
             </button></div>
-
-          <div className="font-medium text-gray-700 dark:text-gray-300 mb-1">
-            <h1 className="block text-lg font-semibold text-red-500 mb-2 mt-6">
-              Password Prerequisites*
-            </h1>
-            <ul className="list-disc pl-5 text-sm space-y-1">
-              <li>Minimum length: 8 characters</li>
-              <li>Must contain one uppercase letter (A-Z)</li>
-              <li>Must contain one lowercase letter (a-z)</li>
-              <li>Must contain at least one number (0-9)</li>
-              <li>Must include one special character (!@#$%^&*)</li>
-            </ul>
-          </div>
+           <p className="text-center text-gray-500 dark:text-gray-400 mb-2">or </p>
+           
+            <GoogleLoginButton />
+           
+           
+          
         </form>
       </div>
     </div>
