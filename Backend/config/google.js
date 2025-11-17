@@ -23,17 +23,18 @@ passport.use(
 
         const email = profile.emails[0].value;
 
-        // Check existing user
+        // Check does user already exists 
         let user = await User.findOne({ email });
 
         if (!user) {
-          // Generate random password for schema requirement
+          // Generate random password 
           const randomPassword = Math.random().toString(36).slice(-8);
 
           const salt = await bcrypt.genSalt(10);
           const hashedPassword = await bcrypt.hash(randomPassword, salt);
              console.log(profile);
              
+          //save user to db
           user = new User({
             name: profile.displayName,
             email,
