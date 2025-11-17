@@ -119,7 +119,7 @@ QUIZ APP (MINOR)/
 1. **Clone the repository**
    ```bash
    git clone https://github.com/ajaykhawse0/QuizApp.git
-   cd "QUIZ APP (MINOR)"
+  
    ```
 
 2. **Backend Setup**
