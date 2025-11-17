@@ -211,9 +211,18 @@ async function processQuestion(questionData, index) {
 }
 async function handleGetAllQuizes(req, res) {
   try {
-    const quizzes = await Quiz.find({ isPublished: true })
-      .select("title difficulty questions timeLimit category createdBy")
-      .populate("createdBy", "name");
+    const limit = parseInt(req.query.limit) || 10;
+    const page = parseInt(req.query.page) || 1;
+    const skip = (page - 1) * limit;
+
+    const [quizzes, totalQuizzes] = await Promise.all([
+      Quiz.find({ isPublished: true })
+        .skip(skip)
+        .limit(limit)
+        .select("title difficulty questions timeLimit category createdBy")
+        .populate("createdBy", "name"),
+      Quiz.countDocuments({ isPublished: true }),
+    ]);
 
     // Get all unique category IDs
     const categoryIds = [
@@ -238,14 +247,17 @@ async function handleGetAllQuizes(req, res) {
       createdBy: quiz.createdBy ? quiz.createdBy.name : "Unknown",
     }));
 
-    return res.status(200).json({ quizzes: quizList });
+    return res.status(200).json({
+      quizzes: quizList,
+      currentPage: page,
+      totalPages: Math.ceil(totalQuizzes / limit),
+      totalQuizzes: totalQuizzes,
+    });
   } catch (err) {
     console.error("Error fetching quizzes:", err);
     return res.status(500).json({ message: "Internal server error" });
   }
 }
-
-
 
 async function handleGetUserQuizzes(req, res) {
   const role = req.user.role;
@@ -311,7 +323,6 @@ async function handleUpdateQuiz(req, res) {
 
     let isModified = false;
 
-
     if (title && quiz.title !== title) {
       quiz.title = title;
       isModified = true;
@@ -345,7 +356,6 @@ async function handleUpdateQuiz(req, res) {
       isModified = true;
     }
 
- 
     if (!isModified) {
       return res.status(200).json({ message: "No changes detected" });
     }
@@ -370,7 +380,6 @@ async function handleGetQuizById(req, res) {
     if (!quiz) {
       return res.status(404).json({ message: "Quiz not found" });
     }
-
 
     const quizData = {
       id: quiz._id,
@@ -420,15 +429,37 @@ async function handleGetQuizByCategory(req, res) {
   }
   const categoryId = existingCategory._id;
   try {
-    const quizzes = await Quiz.find({
-      category: categoryId,
-      isPublished: true,
-    }).populate("createdBy", "name");
+    //Pagination
+    const limit = parseInt(req.query.limit) || 10;
+    const page = parseInt(req.query.page) || 1;
+    const skip = (page - 1) * limit;
+
+
+
+    // const quizzes = await Quiz.find({
+    //   category: categoryId,
+    //   isPublished: true,
+    // }).skip(skip).limit(limit).populate("createdBy", "name");
+
+    const [quizzes,totalQuizzes] = await Promise.all([
+        Quiz.find({
+        category: categoryId,
+        isPublished: true, })
+        .skip(skip)
+        .limit(limit)
+        .populate("createdBy", "name"),
+
+
+        Quiz.countDocuments({category:categoryId,isPublished:true})
+    ])
     const quizList = quizzes.map((quiz) => ({
       id: quiz._id,
       title: quiz.title,
       difficulty: quiz.difficulty,
       questionCount: quiz.questions.length,
+      currentPage: page,
+      totalPages: Math.ceil(totalQuizzes/limit),
+      category: category,
       timeLimit: quiz.timeLimit,
       createdBy: quiz.createdBy ? quiz.createdBy.name : "user",
     }));

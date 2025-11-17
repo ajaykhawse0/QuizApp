@@ -17,6 +17,8 @@ const TakeQuiz = () => {
   const [error, setError] = useState('');
 
   const didRun = useRef(false);
+  const isSubmittingRef = useRef(false);
+
   useEffect(() => {
     if (didRun.current) return;
     didRun.current = true;
@@ -46,6 +48,53 @@ const TakeQuiz = () => {
       return () => clearInterval(timer);
     }
   }, [timeLeft, startTime]);
+
+  // Warning and auto-submit on page unload, refresh, or back navigation
+  useEffect(() => {
+    if (!quiz || !startTime) return;
+
+    // Function to handle beforeunload (refresh, close tab)
+    const handleBeforeUnload = (e) => {
+      if (isSubmittingRef.current) return;
+
+      e.preventDefault();
+      e.returnValue = 'Your quiz progress will be automatically submitted if you leave. Are you sure?';
+      
+      // Auto-submit quiz
+      handleAutoSubmit();
+      
+      return e.returnValue;
+    };
+
+    // Function to handle popstate (back button)
+    const handlePopState = (e) => {
+      if (isSubmittingRef.current) return;
+
+      const confirmLeave = window.confirm(
+        'If you go back, your quiz will be automatically submitted. Do you want to continue?'
+      );
+
+      if (confirmLeave) {
+        handleAutoSubmit();
+      } else {
+        // Push state back to stay on quiz page
+        window.history.pushState(null, '', window.location.pathname);
+      }
+    };
+
+    // Push initial state to detect back button
+    window.history.pushState(null, '', window.location.pathname);
+
+    // Add event listeners
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('popstate', handlePopState);
+
+    // Cleanup
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [quiz, startTime, answers]);
 
   const fetchQuiz = async () => {
     try {
@@ -85,7 +134,7 @@ const TakeQuiz = () => {
   };
 
   const handleSubmit = async () => {
-    if (submitting) return;
+    if (submitting || isSubmittingRef.current) return;
 
     const unanswered = answers.filter((a) => a === null).length;
     if (unanswered > 0) {
@@ -96,6 +145,8 @@ const TakeQuiz = () => {
     }
 
     setSubmitting(true);
+    isSubmittingRef.current = true;
+
     try {
       const timeTaken = Math.floor((Date.now() - startTime) / 1000);
       const response = await resultAPI.submit({
@@ -105,13 +156,52 @@ const TakeQuiz = () => {
       });
 
       if (response.data.result?.id) {
-        navigate(`/result/${response.data.result.id}`);
+        navigate(`/result/${response.data.result.id}`, { replace: true });
       } else {
-        navigate('/results');
+        navigate('/results', { replace: true });
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to submit quiz');
       setSubmitting(false);
+      isSubmittingRef.current = false;
+    }
+  };
+
+  // Auto-submit function for page unload scenarios
+  const handleAutoSubmit = async () => {
+    if (isSubmittingRef.current) return;
+    
+    isSubmittingRef.current = true;
+
+    try {
+      const timeTaken = Math.floor((Date.now() - startTime) / 1000);
+      
+      // Use sendBeacon for reliable submission during page unload
+      const data = JSON.stringify({
+        quizId: id,
+        answers: answers,
+        timetaken: timeTaken,
+      });
+
+      const token = localStorage.getItem('token');
+      const blob = new Blob([data], { type: 'application/json' });
+      
+      // Try to use sendBeacon first (more reliable during unload)
+      const beaconSent = navigator.sendBeacon(
+        `${import.meta.env.VITE_API_BASE_URL}/result/submit`,
+        blob
+      );
+
+      if (!beaconSent) {
+        // Fallback to sync XHR if beacon fails
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', `${import.meta.env.VITE_API_BASE_URL}/result/submit`, false);
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+        xhr.send(data);
+      }
+    } catch (err) {
+      console.error('Auto-submit failed:', err);
     }
   };
 

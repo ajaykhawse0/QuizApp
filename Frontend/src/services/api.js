@@ -65,9 +65,9 @@ export const authAPI = {
 
 // Quiz API
 export const quizAPI = {
-  getAll: () => api.get('/quiz/quizzes'),
+  getAll: (params) => api.get('/quiz/quizzes',{params}),
   getById: (id) => api.get(`/quiz/quizzes/${id}`),
-  getbyCategory: (categoryname) => api.get(`/quiz/category/${categoryname}`),
+  getbyCategory: (categoryname,params) => api.get(`/quiz/category/${categoryname}`,{params}),
   getUserQuizzes: (params) => api.get('/quiz/admin/quizzes', { params }),
   create: (data) => api.post('/quiz/createquiz', data),
   update: (id, data) => api.put(`/quiz/update/${id}`, data),

@@ -9,6 +9,8 @@ const QuizList = () => {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
    useEffect(() => {
   const url = new URL(window.location.href);
@@ -25,16 +27,17 @@ const QuizList = () => {
 }, []);
 
   useEffect(() => {
-    fetchAllQuizzes();
-  }, []);
+    fetchAllQuizzes(currentPage);
+  }, [currentPage]);
 
-  const fetchAllQuizzes = async () => {
+  const fetchAllQuizzes = async (page=1, limit=10) => {
     try {
       setLoading(true);
-      const response = await quizAPI.getAll();
+      const params = { page, limit};
+      const response = await quizAPI.getAll(params);
       const quizData = response.data.quizzes || [];
       setQuizzes(quizData);
-
+      setTotalPages(response.data.totalPages || 1);
       // Extract unique categories
       const uniqueCategories = ['All', ...new Set(quizData.map(q => q.category || 'Uncategorized'))];
       setCategories(uniqueCategories);
@@ -49,11 +52,13 @@ const QuizList = () => {
     try {
       setLoading(true);
       if (category === 'All') {
-        await fetchAllQuizzes();
+        await fetchAllQuizzes(1); // Always fetch page 1 when changing to 'All'
         return;
       }
       const response = await quizAPI.getbyCategory(category);
       setQuizzes(response.data.quizzes || []);
+  
+      setTotalPages(1);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load category quizzes');
     } finally {
@@ -64,8 +69,18 @@ const QuizList = () => {
   const handleCategoryChange = (e) => {
     const category = e.target.value;
     setSelectedCategory(category);
+    setCurrentPage(1); // Reset to page 1 when category changes
     fetchByCategory(category);
   };
+
+    const handlePrevious = () => {
+    if (currentPage > 1) setCurrentPage((prev) => prev - 1);
+  };
+
+  const handleNext = () => {
+    if (currentPage < totalPages) setCurrentPage((prev) => prev + 1);
+  };
+
 
   if (loading) {
     return <LoadingSpinner />;
@@ -79,7 +94,7 @@ const QuizList = () => {
     );
   }
 
-  return (
+  return (<>
     <div>
       {/* Header and Filter */}
       <div className="mb-6 md:mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -121,6 +136,36 @@ const QuizList = () => {
         </div>
       )}
     </div>
+     <div className="flex flex-col sm:flex-row justify-between items-center mt-6 gap-4">
+              <button
+                onClick={handlePrevious}
+                disabled={currentPage === 1}
+                className={`w-full sm:w-auto px-5 py-2 rounded-lg font-medium transition-all duration-200 text-sm md:text-base ${
+                  currentPage === 1
+                    ? "bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-500 cursor-not-allowed"
+                    : "bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm hover:shadow-md hover:scale-105"
+                }`}
+              >
+                ← Previous
+              </button>
+
+              <span className="text-gray-700 dark:text-gray-300 font-medium text-sm md:text-base">
+                Page {currentPage} of {totalPages}
+              </span>
+
+              <button
+                onClick={handleNext}
+                disabled={currentPage >= totalPages}
+                className={`w-full sm:w-auto px-5 py-2 rounded-lg font-medium transition-all duration-200 text-sm md:text-base ${
+                  currentPage >= totalPages
+                    ? "bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-500 cursor-not-allowed"
+                    : "bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm hover:shadow-md hover:scale-105"
+                }`}
+              >
+                Next →
+              </button>
+            </div>
+             </>
   );
 };
 
