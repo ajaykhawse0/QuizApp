@@ -481,7 +481,7 @@ async function handleGetUserStatistics(req, res) {
         const bestResult = results.find(r => r.percentage === bestScore);
 
         // Get quiz titles attempted
-        // FIX 1: Filter out results where quizId is null (deleted) before mapping
+        //Filter out results where quizId is null (deleted) before mapping
         const quizzesAttempted = [...new Set(
             results
                 .filter(r => r.quizId) // Only include results that have a valid quiz
@@ -499,7 +499,9 @@ async function handleGetUserStatistics(req, res) {
                 totalTimeSpent: totalTimeSpent.toFixed(2),
                 bestScore: bestScore.toFixed(2),
                 bestQuiz: bestResult ? {
-                    // FIX 2: Check if bestResult.quizId exists before accessing .title
+                    //  Check if bestResult.quizId exists 
+
+
                     title: bestResult.quizId ? bestResult.quizId.title : 'Deleted Quiz',
                     score: bestResult.score,
                     total: bestResult.total,
@@ -511,7 +513,8 @@ async function handleGetUserStatistics(req, res) {
                 .sort((a, b) => b.submittedAt - a.submittedAt)
                 .slice(0, 5)
                 .map(r => ({
-                    // FIX 3: Check if r.quizId exists before accessing .title
+                    // Check if r.quizId exists 
+
                     quizTitle: r.quizId ? r.quizId.title : 'Deleted Quiz',
                     score: r.score,
                     total: r.total,
