@@ -5,7 +5,7 @@ import LoadingSpinner from '../Common/LoadingSpinner';
 
 const QuizList = () => {
   const [quizzes, setQuizzes] = useState([]);
-  const [categories, setCategories] = useState([]);
+  const [categories, setCategories] = useState(['All']);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -26,9 +26,28 @@ const QuizList = () => {
   }
 }, []);
 
+  // Fetch all categories once on component mount
+  useEffect(() => {
+    fetchAllCategories();
+  }, []);
+
   useEffect(() => {
     fetchAllQuizzes(currentPage);
   }, [currentPage]);
+
+  const fetchAllCategories = async () => {
+    try {
+     
+      const response = await quizAPI.getAll({ page: 1, limit: 1000 });
+      const allQuizzes = response.data.quizzes || [];
+      const uniqueCategories = ['All', ...new Set(allQuizzes.map(q => q.category || 'Uncategorized'))];
+      setCategories(uniqueCategories);
+    } catch (err) {
+      console.error('Failed to fetch categories:', err);
+      // Set default if fetch fails
+      setCategories(['All']);
+    }
+  };
 
   const fetchAllQuizzes = async (page=1, limit=10) => {
     try {
@@ -38,9 +57,6 @@ const QuizList = () => {
       const quizData = response.data.quizzes || [];
       setQuizzes(quizData);
       setTotalPages(response.data.totalPages || 1);
-      // Extract unique categories
-      const uniqueCategories = ['All', ...new Set(quizData.map(q => q.category || 'Uncategorized'))];
-      setCategories(uniqueCategories);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load quizzes');
     } finally {
