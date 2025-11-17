@@ -22,7 +22,7 @@ router.get(
     // User is available on req.user (from deserializeUser)
     const user = req.user;
 
-    // Generate JWT (same payload as your normal login)
+    // Generate JWT 
     const token = jwt.sign(
       {
         email: user.email,
@@ -33,7 +33,7 @@ router.get(
       { expiresIn: "168h" } // 7 days
     );
 
-    // Set JWT cookie (same as your normal login)
+    // Set JWT cookie 
     res.cookie("authToken", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -47,7 +47,7 @@ router.get(
   }
 );
 
-// Failure route (optional)
+// Failure route
 router.get("/failure", (req, res) => {
   return res.status(401).json({ message: "Google Login Failed" });
 });
