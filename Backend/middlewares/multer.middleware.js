@@ -5,7 +5,7 @@ const memoryStorage = multer.memoryStorage();
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "/tmp"); // ✅ always safe on Render
+    cb(null, "/tmp"); 
   },
   filename: (req, file, cb) => {
     cb(null, Date.now() + "-" + file.originalname);
