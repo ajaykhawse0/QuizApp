@@ -21,7 +21,7 @@ const CACHE_30_SEC = 30;
 
 // Public routes with caching
 router.get("/", cacheMiddleware(CACHE_1_MIN), handleGetAllContests);
-router.get("/my-contests", cacheMiddleware(CACHE_1_MIN), handleGetMyContests);
+router.get("/my-contests", handleGetMyContests);
 router.get("/:id", cacheMiddleware(CACHE_1_MIN), handleGetContestById);
 router.get("/:id/leaderboard", cacheMiddleware(CACHE_30_SEC), handleGetContestLeaderboard);
 router.post("/:id/join", handleJoinContest);

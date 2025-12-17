@@ -16,7 +16,7 @@ const { cacheMiddleware } = require("../config/redis");
 
 // Cache durations
 const CACHE_2_MIN = 120;
-const CACHE_1_MIN = 60;
+
 
 // Submit quiz result
 router.post('/submit', handleSubmitQuiz);
@@ -25,11 +25,11 @@ router.post('/submit', handleSubmitQuiz);
 router.get('/admin/all', adminOnly, handleGetAllResults);
 
 
-router.get('/user', cacheMiddleware(CACHE_1_MIN), handleGetResultsByUser);
+router.get('/user', handleGetResultsByUser);
 
 
 // user statistics
-router.get('/user/statistics', cacheMiddleware(CACHE_2_MIN), handleGetUserStatistics);
+router.get('/user/statistics',  handleGetUserStatistics);
 
 // Get quiz statistics/analytics )
 router.get('/quiz/:quizId/statistics', cacheMiddleware(CACHE_2_MIN), handleGetQuizStatistics);
@@ -38,7 +38,7 @@ router.get('/quiz/:quizId/statistics', cacheMiddleware(CACHE_2_MIN), handleGetQu
 router.get('/quiz/:quizId', cacheMiddleware(CACHE_2_MIN), handleGetResultsByQuiz);
 
 // Leaderboard for a quiz (top 10)
-router.get('/leaderboard/:quizId', cacheMiddleware(CACHE_1_MIN), leaderboard);
+router.get('/leaderboard/:quizId', cacheMiddleware(CACHE_2_MIN), leaderboard);
 
 // Get specific result by ID 
 router.get('/:id', cacheMiddleware(CACHE_2_MIN), handleGetResultById);
