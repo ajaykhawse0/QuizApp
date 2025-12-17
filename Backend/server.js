@@ -16,10 +16,10 @@ const passport = require("passport");
 const {rateLimit} = require('express-rate-limit');
 require("./config/google");
 const {protectRoute} = require("./middlewares/authMiddleware");
-const PORT = 5000;
 const app = express();
 const dotenv = require("dotenv");
 dotenv.config();  
+const PORT = process.env.PORT || 5000;
 
 // CORS configuration - must specify origin when using credentials
 const corsOptions = {

@@ -6,7 +6,7 @@ const connectRedis = async () => {
   try {
     // Create Redis client
     redisClient = redis.createClient({
-      url: process.env.REDIS_URL || 'redis://localhost:6379',
+      url: `redis://:${process.env.REDIS_PASSWORD}@${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`,
       socket: {
         connectTimeout: 10000,
         reconnectStrategy: (retries) => {
@@ -14,7 +14,8 @@ const connectRedis = async () => {
             console.log('Redis max retries reached');
             return new Error('Redis max retries reached');
           }
-          return retries * 100; // Exponential backoff
+          return Math.min(retries * 200, 3000);
+ // Exponential backoff
         }
       }
     });
