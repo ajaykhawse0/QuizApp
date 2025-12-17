@@ -1,91 +1,124 @@
 const express = require("express");
 const cors = require("cors");
- const cookieParser = require("cookie-parser");
+const cookieParser = require("cookie-parser");
+const session = require("express-session");
+const passport = require("passport");
+const { rateLimit } = require("express-rate-limit");
+const dotenv = require("dotenv");
+
 const connectDB = require("./connection");
 const { connectRedis } = require("./config/redis");
+
 const authRouter = require("./routes/authRoutes");
 const googleAuthRouter = require("./routes/googleAuthRoutes");
 const quizRouter = require("./routes/quizRoutes");
 const resultRouter = require("./routes/resultRoutes");
 const categoryRouter = require("./routes/categoryRoutes");
 const profileRouter = require("./routes/profileRoutes");
-const superAdminRouter = require('./routes/superadminRoutes');
-const contestRouter = require('./routes/contestRoutes');
-const session = require("express-session");
-const passport = require("passport");
-const {rateLimit} = require('express-rate-limit');
+const superAdminRouter = require("./routes/superadminRoutes");
+const contestRouter = require("./routes/contestRoutes");
+
+const { protectRoute } = require("./middlewares/authMiddleware");
+
 require("./config/google");
-const {protectRoute} = require("./middlewares/authMiddleware");
+
+dotenv.config();
+
 const app = express();
-const dotenv = require("dotenv");
-dotenv.config();  
 const PORT = process.env.PORT || 5000;
 
-// CORS configuration - must specify origin when using credentials
+/**
+ * Trust proxy (required for rate-limit + deployments behind proxies)
+ */
+app.set("trust proxy", 1);
+
+/**
+ * CORS configuration
+ */
 const corsOptions = {
   origin: [process.env.CORS_ORIGIN],
-  credentials: true, 
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  exposedHeaders: ['Content-Type', 'Authorization'],
-  optionsSuccessStatus: 200 
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+  exposedHeaders: ["Content-Type", "Authorization"],
+  optionsSuccessStatus: 200,
 };
 
-
+/**
+ * Rate limiter
+ */
 const limiter = rateLimit({
-	windowMs: 15 * 60 * 1000, // 15 minutes
-	limit: 100, // Limit each IP to 100 requests per `window` (here, per 15 minutes).
-	standardHeaders: 'draft-8', // draft-6: `RateLimit-*` headers; draft-7 & draft-8: combined `RateLimit` header
-	legacyHeaders: false, // Disable the `X-RateLimit-*` headers.
-	ipv6Subnet: 56, // Set to 60 or 64 to be less aggressive, or 52 or 48 to be more aggressive
-	message: 'Too many requests from this IP, please try again after 15 minutes.',
-})
+  windowMs: 15 * 60 * 1000,
+  limit: 100,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  ipv6Subnet: 56,
+  message: "Too many requests from this IP, please try again after 15 minutes.",
+});
 
-
-
-
-//Midleware
+//Middlewares
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-
+/**
+ * Session configuration
+ * (MemoryStore fallback if Redis is unavailable)
+ */
 app.use(
   session({
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
-    cookie: { secure: process.env.NODE_ENV === "production" },
+    cookie: {
+      secure: process.env.NODE_ENV === "production",
+      httpOnly: true,
+      sameSite: "lax",
+    },
   })
 );
 
+
+ // Passport
+ 
 app.use(passport.initialize());
 app.use(passport.session());
+
+
+ //Rate limiting
+ 
 app.use(limiter);
 
-//Routes
+/**
+ * Routes
+ */
+app.use("/api/auth", authRouter);
+app.use("/api/auth/google", googleAuthRouter);
 
-app.use('/api/auth',authRouter);
-app.use('/api/auth/google',googleAuthRouter);
-app.use('/api/quiz',quizRouter);
-app.use('/api/result',protectRoute,resultRouter);
-app.use('/api/categories',protectRoute,categoryRouter);
-app.use('/api/profile',profileRouter);
-app.use('/api/superadmin',protectRoute,superAdminRouter);
-app.use('/api/contests',protectRoute, contestRouter);
+app.use("/api/quiz", quizRouter);
+app.use("/api/result", protectRoute, resultRouter);
+app.use("/api/categories", protectRoute, categoryRouter);
+app.use("/api/profile", protectRoute, profileRouter);
+app.use("/api/superadmin", protectRoute, superAdminRouter);
+app.use("/api/contests", protectRoute, contestRouter);
 
-
+/**
+ * Database connections
+ */
 const MONGO_DB_URL = process.env.MONGO_URI;
-
-// Connect to MongoDB
 connectDB(MONGO_DB_URL);
 
-// Connect to Redis (optional - app works without it)
-connectRedis().catch(err => {
-  console.log('⚠️  Redis not available, continuing without cache');
+/**
+ * Redis connection (optional)
+ */
+connectRedis().catch(() => {
+  console.log("Redis not available, continuing without cache");
 });
 
+/**
+ * Start server
+ */
 app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
+  console.log(`Server is running on http://localhost:${PORT}`);
 });
