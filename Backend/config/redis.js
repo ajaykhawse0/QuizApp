@@ -64,7 +64,7 @@ const cacheMiddleware = (duration = 300) => {
     }
 
     try {
-      const key = `cache:${req.user._id}:${req.originalUrl}`;
+      const key = req.user?._id? `cache:${req.user._id}:${req.originalUrl}` : `cache:${req.originalUrl}`;
       const cachedData = await redisClient.get(key);
 
       if (cachedData) {
