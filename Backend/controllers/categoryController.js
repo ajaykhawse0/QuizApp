@@ -1,4 +1,5 @@
 const Category = require('../models/Category');
+const { invalidateCache } = require("../config/redis");
 
 
 async function handleCreateCategory(req, res) {
@@ -10,6 +11,11 @@ async function handleCreateCategory(req, res) {
             }
             const category = new Category({name,description});
             await category.save();
+            
+            // Invalidate category and quiz caches
+            await invalidateCache('cache:/api/category*');
+            await invalidateCache('cache:/api/quiz*');
+            
             return res.status(201).json({message:"Category created successfully",category});
         }
         catch(err){

@@ -27,6 +27,11 @@ import UploadProfile from "./components/Profile/UploadProfile";
 import ProfilePage from "./components/Profile/ProfilePage";
 import UpdateQuiz from "./components/Admin/UpdateQuiz";
 import SuperAdminPanel from "./components/SuperAdmin/SuperAdminPanel";
+import ContestList from "./components/Contest/ContestList";
+import ContestDetail from "./components/Contest/ContestDetail";
+import ContestLeaderboard from "./components/Contest/ContestLeaderboard";
+import CreateContest from "./components/Contest/CreateContest";
+import MyContests from "./components/Contest/MyContests";
 const AppRoutes = () => {
   const { isAuthenticated } = useAuth();
 
@@ -186,6 +191,58 @@ const AppRoutes = () => {
       <ResetPassword />
       </Layout>
       } />
+
+      {/* Contest Routes */}
+      <Route
+        path="/contests"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <ContestList />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/contests/create"
+        element={
+          <ProtectedRoute adminOnly>
+            <Layout>
+              <CreateContest />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/contests/:id"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <ContestDetail />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/contests/:id/leaderboard"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <ContestLeaderboard />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/my-contests"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <MyContests />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
 
       {/* Catch all */}
       <Route path="*" element={<Navigate to="/" replace />} />

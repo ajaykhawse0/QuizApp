@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { quizAPI, resultAPI } from '../../services/api';
 import LoadingSpinner from '../Common/LoadingSpinner';
 import { useRef } from 'react';
@@ -7,6 +7,9 @@ import { useRef } from 'react';
 const TakeQuiz = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const contestId = searchParams.get('contestId');
   const [quiz, setQuiz] = useState(null);
   const [answers, setAnswers] = useState([]);
   const [currentQuestion, setCurrentQuestion] = useState(0);
@@ -153,6 +156,7 @@ const TakeQuiz = () => {
         quizId: id,
         answers: answers,
         timetaken: timeTaken,
+        contestId: contestId || null,
       });
 
       if (response.data.result?.id) {
@@ -181,6 +185,7 @@ const TakeQuiz = () => {
         quizId: id,
         answers: answers,
         timetaken: timeTaken,
+        contestId: contestId || null,
       });
 
       const token = localStorage.getItem('token');

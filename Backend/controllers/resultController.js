@@ -1,13 +1,15 @@
 const User = require('../models/User');
 const Quiz = require('../models/Quiz');
 const Result = require('../models/Result');
+const Contest = require('../models/Contest');
+const { invalidateCache } = require("../config/redis");
 
 
 async function handleSubmitQuiz(req,res){
     const userId = req.user._id;
     console.log(req.body);
     
-    const{quizId , answers , timetaken } = req.body;
+    const{quizId , answers , timetaken, contestId } = req.body;
         
         
     try{
@@ -39,6 +41,7 @@ async function handleSubmitQuiz(req,res){
          const result = new Result({
             userId,
             quizId,
+            contestId: contestId || null,
             score,
             total,
             timeTaken:timetaken,
@@ -48,6 +51,23 @@ async function handleSubmitQuiz(req,res){
             correctAnswers: answers 
          });
          await result.save();
+
+        // If this is a contest submission, update contest participant data
+         if (contestId) {
+            const contest = await Contest.findById(contestId);
+            if (contest) {
+                const participantIndex = contest.participants.findIndex(
+                    p => p.user.toString() === userId.toString()
+                );
+                
+                if (participantIndex !== -1) {
+                    contest.participants[participantIndex].hasCompleted = true;
+                    contest.participants[participantIndex].score = score;
+                    contest.participants[participantIndex].completedAt = new Date();
+                    await contest.save();
+                }
+            }
+         }
 
         
             const user = await User.findById(userId);
@@ -59,6 +79,9 @@ async function handleSubmitQuiz(req,res){
             });
             await user.save();
          
+         // Invalidate relevant caches
+         await invalidateCache('cache:/api/result*');
+         await invalidateCache('cache:/api/contests*'); // If contest result
          
          
          return res.status(200).json({
@@ -372,6 +395,9 @@ async function handleDeleteResult(req, res) {
         }
 
         await Result.findByIdAndDelete(resultId);
+
+        // Invalidate result caches
+        await invalidateCache('cache:/api/result*');
 
         return res.status(200).json({ message: "Result deleted successfully" });
     } catch (err) {

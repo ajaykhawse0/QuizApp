@@ -1,11 +1,11 @@
-import { Link, useNavigate } from 'react-router-dom';
-import { useState, useRef, useEffect } from 'react';
-import { useAuth } from '../../context/AuthContext';
-import { useTheme } from '../../context/ThemeContext';
+import { Link, useNavigate } from "react-router-dom";
+import { useState, useRef, useEffect } from "react";
+import { useAuth } from "../../context/AuthContext";
+import { useTheme } from "../../context/ThemeContext";
 
 const Navbar = () => {
   const { user, logout, isAdmin } = useAuth();
-  const { darkMode, toggleDarkMode } = useTheme();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -14,7 +14,7 @@ const Navbar = () => {
 
   const handleLogout = async () => {
     await logout();
-    navigate('/login');
+    navigate("/login");
   };
 
   useEffect(() => {
@@ -23,13 +23,13 @@ const Navbar = () => {
         setDropdownOpen(false);
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   // Helper styles
   const linkStyle =
-    'block md:inline-flex items-center px-3 py-2 text-sm font-medium text-gray-900 dark:text-gray-100 hover:text-primary-600 dark:hover:text-primary-400 transition';
+    "block md:inline-flex items-center px-3 py-2 text-sm font-medium text-gray-900 dark:text-gray-100 hover:text-primary-600 dark:hover:text-primary-400 transition";
 
   return (
     <nav className="bg-white dark:bg-gray-900 shadow-lg transition-colors duration-200 sticky top-0 z-50">
@@ -41,19 +41,39 @@ const Navbar = () => {
               to="/"
               className="text-xl md:text-2xl font-bold text-primary-600 dark:text-primary-400"
             >
-              QuizApp
+              Quizify
             </Link>
 
             {/* Desktop Nav Links */}
             <div className="hidden md:flex md:space-x-4">
-              <Link to="/" className={linkStyle}>Quizzes</Link>
+              <Link to="/" className={linkStyle}>
+                Quizzes
+              </Link>
               {user && (
                 <>
-                  <Link to="/results" className={linkStyle}>My Results</Link>
-                  <Link to="/statistics" className={linkStyle}>Statistics</Link>
-                  <Link to="/progress" className={linkStyle}>Progress</Link>
-                  <Link to="/leaderboard" className={linkStyle}>Leaderboard</Link>
-                  {isAdmin && <Link to="/admin" className={linkStyle}>Admin</Link>}
+                  <Link to="/contests" className={linkStyle}>
+                    Contests
+                  </Link>
+                  <Link to="/my-contests" className={linkStyle}>
+                    My Contests
+                  </Link>
+                  <Link to="/results" className={linkStyle}>
+                    My Results
+                  </Link>
+                  <Link to="/statistics" className={linkStyle}>
+                    Statistics
+                  </Link>
+                  <Link to="/progress" className={linkStyle}>
+                    Progress
+                  </Link>
+                  <Link to="/leaderboard" className={linkStyle}>
+                    Leaderboard
+                  </Link>
+                  {isAdmin && (
+                    <Link to="/admin" className={linkStyle}>
+                      Admin
+                    </Link>
+                  )}
                 </>
               )}
             </div>
@@ -63,12 +83,18 @@ const Navbar = () => {
           <div className="flex items-center gap-3">
             {/* Theme Toggle */}
             <button
-              onClick={toggleDarkMode}
+              onClick={toggleTheme}
               className="p-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
               aria-label="Toggle dark mode"
             >
-              {darkMode ? (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {theme === "dark" ? (
+                // Sun icon
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -77,7 +103,13 @@ const Navbar = () => {
                   />
                 </svg>
               ) : (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                // Moon icon
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -97,12 +129,32 @@ const Navbar = () => {
                   className="md:hidden p-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
                 >
                   {mobileMenuOpen ? (
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    <svg
+                      className="w-6 h-6"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
                     </svg>
                   ) : (
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                    <svg
+                      className="w-6 h-6"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 6h16M4 12h16M4 18h16"
+                      />
                     </svg>
                   )}
                 </button>
@@ -114,7 +166,7 @@ const Navbar = () => {
                     className="focus:outline-none"
                   >
                     <img
-                      src={user?.profilePicture || '/avatars/avatar3.png'}
+                      src={user?.profilePicture || "/avatars/avatar3.png"}
                       alt="Profile"
                       className="w-10 h-10 rounded-full object-cover border-2 border-primary-500 hover:scale-105 transition mt-2"
                     />
@@ -123,8 +175,12 @@ const Navbar = () => {
                   {dropdownOpen && (
                     <div className="absolute right-0 mt-3 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg py-2 z-50">
                       <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
-                        <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">{user.name}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user.email}</p>
+                        <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+                          {user.name}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                          {user.email}
+                        </p>
                       </div>
                       <Link
                         to="/profile"
@@ -176,15 +232,65 @@ const Navbar = () => {
       {/* Mobile Dropdown Menu */}
       {mobileMenuOpen && (
         <div className="md:hidden bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 py-3">
-          <Link to="/" onClick={() => setMobileMenuOpen(false)} className={linkStyle}>Quizzes</Link>
+          <Link
+            to="/"
+            onClick={() => setMobileMenuOpen(false)}
+            className={linkStyle}
+          >
+            Quizzes
+          </Link>
           {user ? (
             <>
-              <Link to="/results" onClick={() => setMobileMenuOpen(false)} className={linkStyle}>My Results</Link>
-              <Link to="/statistics" onClick={() => setMobileMenuOpen(false)} className={linkStyle}>Statistics</Link>
-              <Link to="/progress" onClick={() => setMobileMenuOpen(false)} className={linkStyle}>Progress</Link>
-              <Link to="/leaderboard" onClick={() => setMobileMenuOpen(false)} className={linkStyle}>Leaderboard</Link>
+              <Link
+                to="/contests"
+                onClick={() => setMobileMenuOpen(false)}
+                className={linkStyle}
+              >
+                Contests
+              </Link>
+              <Link
+                to="/my-contests"
+                onClick={() => setMobileMenuOpen(false)}
+                className={linkStyle}
+              >
+                My Contests
+              </Link>
+              <Link
+                to="/results"
+                onClick={() => setMobileMenuOpen(false)}
+                className={linkStyle}
+              >
+                My Results
+              </Link>
+              <Link
+                to="/statistics"
+                onClick={() => setMobileMenuOpen(false)}
+                className={linkStyle}
+              >
+                Statistics
+              </Link>
+              <Link
+                to="/progress"
+                onClick={() => setMobileMenuOpen(false)}
+                className={linkStyle}
+              >
+                Progress
+              </Link>
+              <Link
+                to="/leaderboard"
+                onClick={() => setMobileMenuOpen(false)}
+                className={linkStyle}
+              >
+                Leaderboard
+              </Link>
               {isAdmin && (
-                <Link to="/admin" onClick={() => setMobileMenuOpen(false)} className={linkStyle}>Admin</Link>
+                <Link
+                  to="/admin"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={linkStyle}
+                >
+                  Admin
+                </Link>
               )}
               <button
                 onClick={handleLogout}
@@ -195,8 +301,20 @@ const Navbar = () => {
             </>
           ) : (
             <>
-              <Link to="/login" onClick={() => setMobileMenuOpen(false)} className={linkStyle}>Login</Link>
-              <Link to="/signup" onClick={() => setMobileMenuOpen(false)} className={linkStyle}>Sign Up</Link>
+              <Link
+                to="/login"
+                onClick={() => setMobileMenuOpen(false)}
+                className={linkStyle}
+              >
+                Login
+              </Link>
+              <Link
+                to="/signup"
+                onClick={() => setMobileMenuOpen(false)}
+                className={linkStyle}
+              >
+                Sign Up
+              </Link>
             </>
           )}
         </div>

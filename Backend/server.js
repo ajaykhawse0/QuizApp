@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
  const cookieParser = require("cookie-parser");
 const connectDB = require("./connection");
+const { connectRedis } = require("./config/redis");
 const authRouter = require("./routes/authRoutes");
 const googleAuthRouter = require("./routes/googleAuthRoutes");
 const quizRouter = require("./routes/quizRoutes");
@@ -9,6 +10,7 @@ const resultRouter = require("./routes/resultRoutes");
 const categoryRouter = require("./routes/categoryRoutes");
 const profileRouter = require("./routes/profileRoutes");
 const superAdminRouter = require('./routes/superadminRoutes');
+const contestRouter = require('./routes/contestRoutes');
 const session = require("express-session");
 const passport = require("passport");
 const {rateLimit} = require('express-rate-limit');
@@ -71,13 +73,18 @@ app.use('/api/result',protectRoute,resultRouter);
 app.use('/api/categories',protectRoute,categoryRouter);
 app.use('/api/profile',profileRouter);
 app.use('/api/superadmin',protectRoute,superAdminRouter);
+app.use('/api/contests',protectRoute, contestRouter);
 
 
 const MONGO_DB_URL = process.env.MONGO_URI;
 
-
-
+// Connect to MongoDB
 connectDB(MONGO_DB_URL);
+
+// Connect to Redis (optional - app works without it)
+connectRedis().catch(err => {
+  console.log('⚠️  Redis not available, continuing without cache');
+});
 
 app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);

@@ -98,5 +98,17 @@ export const superadminAPI = {
   handleRole : (id,role)=> api.patch(`/superadmins/roles/${id}`,role)
 }
 
+// Contest API
+export const contestAPI = {
+  getAll: (params) => api.get('/contests', { params }),
+  getById: (id) => api.get(`/contests/${id}`),
+  create: (data) => api.post('/contests/create', data),
+  join: (id) => api.post(`/contests/${id}/join`),
+  getLeaderboard: (id) => api.get(`/contests/${id}/leaderboard`),
+  getMyContests: () => api.get('/contests/my-contests'),
+  update: (id, data) => api.put(`/contests/${id}`, data),
+  delete: (id) => api.delete(`/contests/${id}`),
+};
+
 export default api;
 

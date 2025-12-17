@@ -16,7 +16,7 @@ const Footer = () => {
               to="/"
               className="text-xl md:text-2xl font-bold text-primary-600 dark:text-primary-400 "
             >
-              QuizApp
+             Quizify
             </Link>
             </div>
             <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">

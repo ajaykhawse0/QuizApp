@@ -122,6 +122,26 @@ const AdminDashboard = () => {
 
 
               <Link
+                to="/contests/create"
+                className="bg-green-600 hover:bg-green-700 text-white px-4 md:px-6 py-2 rounded-lg font-medium transition shadow-sm hover:shadow-md flex items-center justify-center gap-2 text-sm md:text-base"
+              >
+                <svg
+                  className="w-4 h-4 md:w-5 md:h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 4v16m8-8H4"
+                  />
+                </svg>
+                <span className="hidden sm:inline">Create Contest</span>
+                <span className="sm:hidden">Contest</span>
+              </Link>
+              <Link
                 to="/admin/create"
                 className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 md:px-6 py-2 rounded-lg font-medium transition shadow-sm hover:shadow-md flex items-center justify-center gap-2 text-sm md:text-base"
               >

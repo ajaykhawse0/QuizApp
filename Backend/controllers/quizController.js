@@ -1,6 +1,7 @@
 const Quiz = require("../models/Quiz");
 const mongoose = require("mongoose");
 const Category = require("../models/Category");
+const { invalidateCache } = require("../config/redis");
 
 async function handleCreateQuiz(req, res) {
   const { title, category, difficulty, questions, timeLimit, isPublished } =
@@ -79,6 +80,9 @@ async function handleCreateQuiz(req, res) {
     });
 
     await newQuiz.save();
+
+    // Invalidate quiz caches
+    await invalidateCache('cache:/api/quiz*');
 
     return res.status(201).json({
       message: "Quiz Created Successfully",
@@ -362,6 +366,9 @@ async function handleUpdateQuiz(req, res) {
 
     await quiz.save();
 
+    // Invalidate quiz caches
+    await invalidateCache('cache:/api/quiz*');
+
     return res.status(200).json({
       message: "Quiz updated successfully",
       quiz,
@@ -411,6 +418,8 @@ async function handleDeleteQuiz(req, res) {
     if (!quiz) {
       return res.status(404).json({ message: "Quiz not found" });
     } else {
+      // Invalidate quiz caches
+      await invalidateCache('cache:/api/quiz*');
       return res.status(200).json({ message: "Quiz deleted successfully" });
     }
   } catch (err) {
