@@ -446,6 +446,7 @@ This project is licensed under the ISC License.
 - [Tailwind CSS](https://tailwindcss.com/) - CSS framework
 - [Cloudinary](https://cloudinary.com/) - Image hosting
 - [Google Identity Services](https://developers.google.com/identity) - OAuth authentication
+- [Redis](https://cloud.redis.io/) - Caching 
 
 ---
 
