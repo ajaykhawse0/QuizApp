@@ -225,7 +225,8 @@ const Signup = () => {
             </button></div>
            <p className="text-center text-gray-500 dark:text-gray-400 mb-2">or </p>
            
-            <GoogleLoginButton />
+           <div className="flex justify-center text-black">
+            <GoogleLoginButton /></div>
            
            
           

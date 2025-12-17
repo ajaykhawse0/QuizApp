@@ -228,8 +228,8 @@ const handleForgotPassword = async (e) => {
               </button>
             </div>
             <p className="text-center text-gray-500 dark:text-gray-400 py-2">or </p>
-           
-            <GoogleLoginButton />
+           <div className="flex justify-center text-black">
+            <GoogleLoginButton /></div>
           </form>
      
         ) : (
