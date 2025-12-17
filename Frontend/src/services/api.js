@@ -101,7 +101,7 @@ export const superadminAPI = {
 // Contest API
 export const contestAPI = {
   getAll: (params) => api.get('/contests', { params }),
-  getById: (id) => api.get(`/contests/${id}`),
+  getById: (id) => api.get(`/contests/contest/${id}`),
   create: (data) => api.post('/contests/create', data),
   join: (id) => api.post(`/contests/${id}/join`),
   getLeaderboard: (id) => api.get(`/contests/${id}/leaderboard`),

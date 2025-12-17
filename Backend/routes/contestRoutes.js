@@ -21,12 +21,12 @@ const CACHE_30_SEC = 30;
 
 // Public routes (cached)
 router.get("/", publicCache(CACHE_5_MIN), handleGetAllContests);
-router.get("/:id", publicCache(CACHE_1_MIN), handleGetContestById);
+router.get("/contest/:id", publicCache(CACHE_1_MIN), handleGetContestById);
 router.get("/:id/leaderboard", publicCache(CACHE_30_SEC), handleGetContestLeaderboard);
-
 // User-specific (no cache)
 router.get("/my-contests", handleGetMyContests);
 router.post("/:id/join", handleJoinContest);
+
 
 // Admin (no cache)
 router.post("/create", adminOnly, handleCreateContest);

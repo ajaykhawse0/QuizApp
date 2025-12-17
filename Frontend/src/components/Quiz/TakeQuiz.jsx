@@ -18,9 +18,13 @@ const TakeQuiz = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [showEligibilityError, setShowEligibilityError] = useState(false);
+  const [eligibilityData, setEligibilityData] = useState(null);
 
   const didRun = useRef(false);
   const isSubmittingRef = useRef(false);
+  const pendingNavigationRef = useRef(false);
 
   useEffect(() => {
     if (didRun.current) return;
@@ -73,16 +77,10 @@ const TakeQuiz = () => {
     const handlePopState = (e) => {
       if (isSubmittingRef.current) return;
 
-      const confirmLeave = window.confirm(
-        'If you go back, your quiz will be automatically submitted. Do you want to continue?'
-      );
-
-      if (confirmLeave) {
-        handleAutoSubmit();
-      } else {
-        // Push state back to stay on quiz page
-        window.history.pushState(null, '', window.location.pathname);
-      }
+      // Prevent navigation and show custom dialog
+      window.history.pushState(null, '', window.location.pathname);
+      setShowLeaveConfirm(true);
+      pendingNavigationRef.current = true;
     };
 
     // Push initial state to detect back button
@@ -107,8 +105,8 @@ const TakeQuiz = () => {
     }catch (error) {
       if (error.response?.status === 403) {
         const { message, daysRemaining, canRetakeAt } = error.response.data;
-        alert(`${message}\nYou can retake this quiz in ${daysRemaining} days.`);
-        navigate('/quizzes');
+        setEligibilityData({ message, daysRemaining, canRetakeAt });
+        setShowEligibilityError(true);
       } else {
         console.error('Error fetching quiz:', error);
         setError('Failed to load quiz');
@@ -210,6 +208,22 @@ const TakeQuiz = () => {
     }
   };
 
+  // Handle confirm leave action
+  const handleConfirmLeave = async () => {
+    setShowLeaveConfirm(false);
+    await handleAutoSubmit();
+    // Navigate back after submission
+    setTimeout(() => {
+      navigate(-1);
+    }, 100);
+  };
+
+  // Handle cancel leave action
+  const handleCancelLeave = () => {
+    setShowLeaveConfirm(false);
+    pendingNavigationRef.current = false;
+  };
+
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -217,6 +231,117 @@ const TakeQuiz = () => {
   };
 
   if (loading) return <LoadingSpinner />;
+
+  // Show eligibility error dialog instead of generic error
+  if (showEligibilityError && eligibilityData) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 md:px-0">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full p-6 animate-in fade-in zoom-in duration-200">
+            {/* Icon */}
+            <div className="flex justify-center mb-4">
+              <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                <svg
+                  className="w-8 h-8 text-red-600 dark:text-red-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 15v2m-6 0h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                  />
+                </svg>
+              </div>
+            </div>
+
+            {/* Content */}
+            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 text-center mb-2">
+              Quiz Not Available
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400 text-center mb-6">
+              {eligibilityData.message}
+            </p>
+
+            {/* Eligibility Info */}
+            <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4 mb-6 border border-red-200 dark:border-red-800">
+              {(() => {
+                const now = new Date();
+                const retakeDate = new Date(eligibilityData.canRetakeAt);
+                const diffMs = retakeDate - now;
+                const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+                const diffMinutes = Math.floor(diffMs / (1000 * 60));
+                const days = eligibilityData.daysRemaining;
+
+                return (
+                  <>
+                    <div className="flex items-center justify-between text-sm mb-2">
+                      <span className="text-gray-600 dark:text-gray-400">Time Remaining:</span>
+                      <span className="font-bold text-red-600 dark:text-red-400 text-lg">
+                        {days >= 1 
+                          ? `${days} ${days === 1 ? 'day' : 'days'}`
+                          : diffHours >= 1
+                          ? `${diffHours} ${diffHours === 1 ? 'hour' : 'hours'}`
+                          : `${diffMinutes} ${diffMinutes === 1 ? 'minute' : 'minutes'}`
+                        }
+                      </span>
+                    </div>
+                    {eligibilityData.canRetakeAt && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-600 dark:text-gray-400">Available After:</span>
+                        <span className="font-semibold text-gray-900 dark:text-gray-100">
+                          {new Date(eligibilityData.canRetakeAt).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </span>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
+
+            {/* Info Message */}
+            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 mb-6 border border-blue-200 dark:border-blue-800">
+              <div className="flex items-start gap-2">
+                <svg
+                  className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                <p className="text-sm text-blue-700 dark:text-blue-300">
+                  You can only retake each quiz once every 7 days to ensure fair practice and learning.
+                </p>
+              </div>
+            </div>
+
+            {/* Action */}
+            <button
+              onClick={() => {
+                setShowEligibilityError(false);
+                navigate('/quizzes');
+              }}
+              className="w-full px-4 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors duration-200 shadow-lg shadow-primary-600/30"
+            >
+              Browse Other Quizzes
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (error || !quiz) {
     return (
@@ -351,6 +476,179 @@ const TakeQuiz = () => {
           )}
         </div>
       </div>
+
+      {/* Custom Leave Confirmation Dialog */}
+      {showLeaveConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full p-6 animate-in fade-in zoom-in duration-200">
+            {/* Icon */}
+            <div className="flex justify-center mb-4">
+              <div className="w-16 h-16 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
+                <svg
+                  className="w-8 h-8 text-orange-600 dark:text-orange-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                  />
+                </svg>
+              </div>
+            </div>
+
+            {/* Content */}
+            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 text-center mb-2">
+              Leave Quiz?
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400 text-center mb-6">
+              If you go back, your quiz will be automatically submitted with your current answers. This action cannot be undone.
+            </p>
+
+            {/* Progress Info */}
+            <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 mb-6">
+              <div className="flex justify-between text-sm mb-2">
+                <span className="text-gray-600 dark:text-gray-400">Answered Questions:</span>
+                <span className="font-semibold text-gray-900 dark:text-gray-100">
+                  {answers.filter((a) => a !== null).length} / {quiz.questions.length}
+                </span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600 dark:text-gray-400">Time Remaining:</span>
+                <span className="font-semibold text-gray-900 dark:text-gray-100">
+                  {formatTime(timeLeft)}
+                </span>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3">
+              <button
+                onClick={handleCancelLeave}
+                className="flex-1 px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-200 font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200"
+              >
+                Stay & Continue
+              </button>
+              <button
+                onClick={handleConfirmLeave}
+                className="flex-1 px-4 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition-colors duration-200 shadow-lg shadow-orange-600/30"
+              >
+                Submit & Leave
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Quiz Eligibility Error Dialog */}
+      {showEligibilityError && eligibilityData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full p-6 animate-in fade-in zoom-in duration-200">
+            {/* Icon */}
+            <div className="flex justify-center mb-4">
+              <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                <svg
+                  className="w-8 h-8 text-red-600 dark:text-red-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 15v2m-6 0h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                  />
+                </svg>
+              </div>
+            </div>
+
+            {/* Content */}
+            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 text-center mb-2">
+              Quiz Not Available
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400 text-center mb-6">
+              {eligibilityData.message}
+            </p>
+
+            {/* Eligibility Info */}
+            <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4 mb-6 border border-red-200 dark:border-red-800">
+              {(() => {
+                const now = new Date();
+                const retakeDate = new Date(eligibilityData.canRetakeAt);
+                const diffMs = retakeDate - now;
+                const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+                const diffMinutes = Math.floor(diffMs / (1000 * 60));
+                const days = eligibilityData.daysRemaining;
+
+                return (
+                  <>
+                    <div className="flex items-center justify-between text-sm mb-2">
+                      <span className="text-gray-600 dark:text-gray-400">Time Remaining:</span>
+                      <span className="font-bold text-red-600 dark:text-red-400 text-lg">
+                        {days >= 1 
+                          ? `${days} ${days === 1 ? 'day' : 'days'}`
+                          : diffHours >= 1
+                          ? `${diffHours} ${diffHours === 1 ? 'hour' : 'hours'}`
+                          : `${diffMinutes} ${diffMinutes === 1 ? 'minute' : 'minutes'}`
+                        }
+                      </span>
+                    </div>
+                    {eligibilityData.canRetakeAt && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-600 dark:text-gray-400">Available After:</span>
+                        <span className="font-semibold text-gray-900 dark:text-gray-100">
+                          {new Date(eligibilityData.canRetakeAt).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </span>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
+
+            {/* Info Message */}
+            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 mb-6 border border-blue-200 dark:border-blue-800">
+              <div className="flex items-start gap-2">
+                <svg
+                  className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                <p className="text-sm text-blue-700 dark:text-blue-300">
+                  You can only retake each quiz once every 7 days to ensure fair practice and learning.
+                </p>
+              </div>
+            </div>
+
+            {/* Action */}
+            <button
+              onClick={() => {
+                setShowEligibilityError(false);
+                navigate('/quizzes');
+              }}
+              className="w-full px-4 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors duration-200 shadow-lg shadow-primary-600/30"
+            >
+              Browse Other Quizzes
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

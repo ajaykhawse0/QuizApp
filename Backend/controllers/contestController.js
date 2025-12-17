@@ -117,8 +117,10 @@ async function handleGetContestById(req, res) {
 
   
   try {
-    const { id } = req.params;
-
+   
+    
+    const { id } = req.params; 
+   
     
     const userId = req.user._id;
 
