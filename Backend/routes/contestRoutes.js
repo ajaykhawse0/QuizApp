@@ -10,25 +10,27 @@ const {
   handleDeleteContest,
 } = require("../controllers/contestController");
 const { adminOnly } = require("../middlewares/authMiddleware");
-const { cacheMiddleware } = require("../config/redis");
+const { publicCache } = require("../config/redis");
 
 const router = express.Router();
 
-// Cache durations (in seconds)
+// Cache durations
 const CACHE_5_MIN = 300;
 const CACHE_1_MIN = 60;
 const CACHE_30_SEC = 30;
 
-// Public routes with caching
-router.get("/", cacheMiddleware(CACHE_1_MIN), handleGetAllContests);
+// Public routes (cached)
+router.get("/", publicCache(CACHE_5_MIN), handleGetAllContests);
+router.get("/:id", publicCache(CACHE_1_MIN), handleGetContestById);
+router.get("/:id/leaderboard", publicCache(CACHE_30_SEC), handleGetContestLeaderboard);
+
+// User-specific (no cache)
 router.get("/my-contests", handleGetMyContests);
-router.get("/:id", cacheMiddleware(CACHE_1_MIN), handleGetContestById);
-router.get("/:id/leaderboard", cacheMiddleware(CACHE_30_SEC), handleGetContestLeaderboard);
 router.post("/:id/join", handleJoinContest);
 
-// Admin routes
-router.post("/create" ,adminOnly, handleCreateContest);
-router.put("/:id" ,adminOnly, handleUpdateContest);
-router.delete("/:id" ,adminOnly, handleDeleteContest);
+// Admin (no cache)
+router.post("/create", adminOnly, handleCreateContest);
+router.put("/:id", adminOnly, handleUpdateContest);
+router.delete("/:id", adminOnly, handleDeleteContest);
 
 module.exports = router;

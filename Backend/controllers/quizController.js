@@ -82,7 +82,7 @@ async function handleCreateQuiz(req, res) {
     await newQuiz.save();
 
     // Invalidate quiz caches
-    await invalidateCache('cache:/api/quiz*');
+   await invalidateCache("cache:public:/api/quiz*");
 
     return res.status(201).json({
       message: "Quiz Created Successfully",
@@ -367,7 +367,7 @@ async function handleUpdateQuiz(req, res) {
     await quiz.save();
 
     // Invalidate quiz caches
-    await invalidateCache('cache:/api/quiz*');
+   await invalidateCache("cache:public:/api/quiz*");
 
     return res.status(200).json({
       message: "Quiz updated successfully",
@@ -419,7 +419,7 @@ async function handleDeleteQuiz(req, res) {
       return res.status(404).json({ message: "Quiz not found" });
     } else {
       // Invalidate quiz caches
-      await invalidateCache('cache:/api/quiz*');
+     await invalidateCache("cache:public:/api/quiz*");
       return res.status(200).json({ message: "Quiz deleted successfully" });
     }
   } catch (err) {

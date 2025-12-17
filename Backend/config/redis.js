@@ -3,7 +3,7 @@ const redis = require("redis");
 let redisClient = null;
 
 /**
- * Connect to Redis
+ * Connect Redis
  */
 const connectRedis = async () => {
   try {
@@ -13,35 +13,33 @@ const connectRedis = async () => {
         connectTimeout: 10000,
         reconnectStrategy: (retries) => {
           if (retries > 10) {
-            console.log("❌ Redis max retries reached");
             return new Error("Redis max retries reached");
           }
-          return Math.min(retries * 200, 3000); // exponential backoff
+          return Math.min(retries * 200, 3000);
         },
       },
     });
 
     redisClient.on("connect", () => {
-      console.log("🔄 Redis Client Connecting...");
+      console.log("Redis connecting...");
     });
 
     redisClient.on("ready", () => {
-      console.log("✅ Redis Client Connected and Ready");
+      console.log("Redis connected and ready");
     });
 
     redisClient.on("reconnecting", () => {
-      console.log("♻️ Redis Client Reconnecting...");
+      console.log("Redis reconnecting...");
     });
 
     redisClient.on("error", (err) => {
-      console.error("❌ Redis Client Error:", err.message);
+      console.error("Redis error:", err.message);
     });
 
     await redisClient.connect();
     return redisClient;
   } catch (error) {
-    console.error("❌ Redis Connection Error:", error.message);
-    console.log("⚠️ Application will continue without Redis caching");
+    console.error("Redis connection failed:", error.message);
     redisClient = null;
     return null;
   }
@@ -57,41 +55,72 @@ const isRedisConnected = () => {
 };
 
 /**
- * Cache Middleware
- * - Public routes → cache:public:<url>
- * - User routes → cache:user:<userId>:<url>
+ * PUBLIC CACHE MIDDLEWARE
+ * Use for global, shared, non-user-specific routes
+ *
+ * Example keys:
+ * cache:public:/api/contests
+ * cache:public:/api/quiz/123
  */
-const cacheMiddleware = (duration = 300) => {
+const publicCache = (duration = 300) => {
   return async (req, res, next) => {
-    if (!isRedisConnected()) {
-      return next();
-    }
+    if (!isRedisConnected()) return next();
 
     try {
-      const cacheKey = req.user?._id
-        ? `cache:user:${req.user._id}:${req.originalUrl}`
-        : `cache:public:${req.originalUrl}`;
+      const key = `cache:public:${req.originalUrl}`;
+      const cached = await redisClient.get(key);
 
-      const cachedData = await redisClient.get(cacheKey);
-
-      if (cachedData) {
-        return res.json(JSON.parse(cachedData));
+      if (cached) {
+        return res.json(JSON.parse(cached));
       }
 
       const originalJson = res.json.bind(res);
 
       res.json = (data) => {
         redisClient
-          .setEx(cacheKey, duration, JSON.stringify(data))
-          .catch((err) =>
-            console.error("❌ Redis cache set error:", err.message)
-          );
+          .setEx(key, duration, JSON.stringify(data))
+          .catch(() => {});
         return originalJson(data);
       };
 
       next();
-    } catch (error) {
-      console.error("❌ Cache middleware error:", error.message);
+    } catch (err) {
+      next();
+    }
+  };
+};
+
+/**
+ * PRIVATE CACHE MIDDLEWARE
+ * Use only for authenticated, user-specific routes
+ *
+ * Example keys:
+ * cache:user:USER_ID:/api/result/user/statistics
+ */
+const privateCache = (duration = 300) => {
+  return async (req, res, next) => {
+    if (!isRedisConnected()) return next();
+    if (!req.user || !req.user._id) return next();
+
+    try {
+      const key = `cache:user:${req.user._id}:${req.originalUrl}`;
+      const cached = await redisClient.get(key);
+
+      if (cached) {
+        return res.json(JSON.parse(cached));
+      }
+
+      const originalJson = res.json.bind(res);
+
+      res.json = (data) => {
+        redisClient
+          .setEx(key, duration, JSON.stringify(data))
+          .catch(() => {});
+        return originalJson(data);
+      };
+
+      next();
+    } catch (err) {
       next();
     }
   };
@@ -99,51 +128,27 @@ const cacheMiddleware = (duration = 300) => {
 
 /**
  * Invalidate cache by pattern
- * Example:
- * invalidateCache('cache:public:/api/result*')
  */
 const invalidateCache = async (pattern) => {
   if (!isRedisConnected()) return;
 
   try {
     const keys = await redisClient.keys(pattern);
-    if (keys.length > 0) {
+    if (keys.length) {
       await redisClient.del(keys);
-      console.log(`🗑️ Invalidated ${keys.length} cache keys: ${pattern}`);
     }
-  } catch (error) {
-    console.error("❌ Cache invalidation error:", error.message);
-  }
+  } catch (err) {}
 };
 
 /**
- * Clear all cache (use carefully)
+ * Clear entire cache
  */
 const clearAllCache = async () => {
   if (!isRedisConnected()) return;
 
   try {
     await redisClient.flushAll();
-    console.log("🧹 All Redis cache cleared");
-  } catch (error) {
-    console.error("❌ Clear cache error:", error.message);
-  }
-};
-
-/**
- * Get Redis stats
- */
-const getCacheStats = async () => {
-  if (!isRedisConnected()) return null;
-
-  try {
-    const stats = await redisClient.info("stats");
-    const keyspace = await redisClient.info("keyspace");
-    return { stats, keyspace };
-  } catch (error) {
-    console.error("❌ Get cache stats error:", error.message);
-    return null;
-  }
+  } catch (err) {}
 };
 
 /**
@@ -153,7 +158,6 @@ const disconnectRedis = async () => {
   if (redisClient) {
     await redisClient.quit();
     redisClient = null;
-    console.log("🔌 Redis Client Disconnected");
   }
 };
 
@@ -161,9 +165,9 @@ module.exports = {
   connectRedis,
   getRedisClient,
   isRedisConnected,
-  cacheMiddleware,
+  publicCache,
+  privateCache,
   invalidateCache,
   clearAllCache,
-  getCacheStats,
   disconnectRedis,
 };

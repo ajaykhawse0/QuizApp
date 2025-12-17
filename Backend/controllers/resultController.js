@@ -458,7 +458,7 @@ async function handleGetQuizStatistics(req, res) {
                 accuracy: ((correctCount / totalAttempts) * 100).toFixed(2)
             };
         });
-
+  
         return res.status(200).json({
             quiz: {
                 id: quiz._id,
