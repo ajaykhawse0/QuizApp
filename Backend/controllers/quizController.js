@@ -382,6 +382,9 @@ async function handleUpdateQuiz(req, res) {
 async function handleGetQuizById(req, res) {
   const quizId = req.params.id;
   try {
+    // Prevent caching since this includes user-specific eligibility checks
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    
     const quiz = await Quiz.findById(quizId).populate("createdBy", "name");
 
     if (!quiz) {

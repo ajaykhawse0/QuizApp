@@ -2,6 +2,11 @@ const Result = require('../models/Result');
 
 async function checkQuizEligibility(req, res, next) {
      try {
+    // Prevent caching of user-specific eligibility checks
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    
     const quizId = req.params.id;
     const userId = req.user._id;
 
