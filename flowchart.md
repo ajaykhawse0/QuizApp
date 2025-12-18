@@ -319,71 +319,50 @@ graph TB
 
 ```mermaid
 erDiagram
-    USER ||--o{ RESULT : submits
-    USER ||--o{ QUIZ : creates
-    USER ||--o{ CONTEST : creates
-    USER }o--o{ CONTEST : participates
-    QUIZ ||--o{ RESULT : has
-    QUIZ ||--o{ CONTEST : used_in
-    CONTEST ||--o{ RESULT : contains
-    CATEGORY ||--o{ QUIZ : categorizes
-    
-    USER {
-        ObjectId _id PK
-        string name
-        string email UK
-        string password
-        string role "user|admin|superadmin"
-        string profilePicture
-        array progress "Quiz history"
-        timestamps created_updated
-    }
-    
-    QUIZ {
-        ObjectId _id PK
-        string title
-        ObjectId category FK
-        string difficulty "easy|medium|hard"
-        array questions "Question objects"
-        number timeLimit "In seconds"
-        ObjectId createdBy FK
-        boolean isPublished
-        timestamps created_updated
-    }
-    
-    RESULT {
-        ObjectId _id PK
-        ObjectId userId FK
-        ObjectId quizId FK
-        ObjectId contestId FK "Optional"
-        array answers "User answers"
-        number score
-        number total
-        number percentage
-        number timeTaken
-        timestamps submittedAt
-    }
-    
-    CONTEST {
-        ObjectId _id PK
-        string title
-        ObjectId quiz FK
-        date startTime
-        date endTime
-        string status "upcoming|live|completed"
-        array participants "User participation data"
-        number maxParticipants
-        object prizeInfo
-        ObjectId createdBy FK
-        timestamps created_updated
-    }
-    
-    CATEGORY {
-        ObjectId _id PK
-        string name UK
-        string description
-        timestamps created_updated
-    }
+
+USER ||--o{ RESULT : submits
+USER ||--o{ QUIZ : creates
+USER }o--o{ CONTEST : participates
+QUIZ ||--o{ RESULT : has
+QUIZ ||--o{ CONTEST : used_in
+CONTEST ||--o{ RESULT : contains
+CATEGORY ||--o{ QUIZ : categorizes
+
+USER {
+    ObjectId _id PK
+    string name
+    string email UK
+    string role
+}
+
+QUIZ {
+    ObjectId _id PK
+    string title
+    ObjectId category FK
+    string difficulty
+    number timeLimit
+}
+
+RESULT {
+    ObjectId _id PK
+    ObjectId userId FK
+    ObjectId quizId FK
+    number score
+    number percentage
+}
+
+CONTEST {
+    ObjectId _id PK
+    string title
+    date startTime
+    date endTime
+}
+
+CATEGORY {
+    ObjectId _id PK
+    string name UK
+}
+
 ```
 
 ---
