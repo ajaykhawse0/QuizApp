@@ -610,4 +610,5 @@ This Quiz App is a full-stack MERN application with:
 - **Security**: Bcrypt hashing + JWT tokens + Rate limiting
 - **Features**: Quizzes + Contests + Leaderboards + Analytics + User management
 
-The application follows modern best practices with proper separation of concerns, RESTful API design, responsive UI, and scalable architecture.
+The application follows modern best practices with proper separation of concerns, RESTful API design, responsive UI, and scalable architecture
+.
