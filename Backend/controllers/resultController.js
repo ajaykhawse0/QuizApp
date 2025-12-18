@@ -7,7 +7,7 @@ const { invalidateCache } = require("../config/redis");
 
 async function handleSubmitQuiz(req,res){
     const userId = req.user._id;
-    console.log(req.body);
+  
     
     const{quizId , answers , timetaken, contestId } = req.body;
         

@@ -39,7 +39,7 @@ router.get(
 
 router.get(
   "/quiz/:quizId",
-  publicCache(CACHE_2_MIN),
+  privateCache(CACHE_2_MIN),
   handleGetResultsByQuiz
 );
 
