@@ -26,15 +26,25 @@ graph TB
 ## 🔐 Authentication Flow
 
 ```mermaid
+%%{init: {
+  "theme": "dark",
+  "themeVariables": {
+    "primaryColor": "#1E1E1E",
+    "primaryTextColor": "#FFFFFF",
+    "lineColor": "#FFFFFF",
+    "actorTextColor": "#FFFFFF",
+    "noteTextColor": "#FFFFFF",
+    "sequenceNumberColor": "#FFFFFF"
+  }
+}}%%
+
 sequenceDiagram
-    %% === DARK LABEL COLORS FOR VISIBILITY ===
     participant U as User
     participant F as Frontend
     participant B as Backend
     participant DB as MongoDB
     participant G as Google OAuth
 
-    %% === TRADITIONAL LOGIN BLOCK ===
     rect #1E3A8A
     Note over U,G: Traditional Login
     U->>F: Enter email & password
@@ -47,7 +57,6 @@ sequenceDiagram
     F-->>U: Redirect to Dashboard
     end
 
-    %% === GOOGLE LOGIN BLOCK ===
     rect #7F1D1D
     Note over U,G: Google OAuth Login
     U->>F: Click "Sign in with Google"
@@ -63,6 +72,7 @@ sequenceDiagram
     F->>F: Store token in localStorage
     F-->>U: Redirect to Dashboard
     end
+`
 
 
 ```
