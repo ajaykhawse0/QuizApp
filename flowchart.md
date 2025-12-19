@@ -27,13 +27,15 @@ graph TB
 
 ```mermaid
 sequenceDiagram
+    %% === DARK LABEL COLORS FOR VISIBILITY ===
     participant U as User
     participant F as Frontend
     participant B as Backend
     participant DB as MongoDB
     participant G as Google OAuth
 
-    rect #C8DCFF
+    %% === TRADITIONAL LOGIN BLOCK ===
+    rect #1E3A8A
     Note over U,G: Traditional Login
     U->>F: Enter email & password
     F->>B: POST /api/auth/login
@@ -45,7 +47,8 @@ sequenceDiagram
     F-->>U: Redirect to Dashboard
     end
 
-    rect #FFDCC8
+    %% === GOOGLE LOGIN BLOCK ===
+    rect #7F1D1D
     Note over U,G: Google OAuth Login
     U->>F: Click "Sign in with Google"
     F->>G: Redirect to Google
@@ -60,6 +63,7 @@ sequenceDiagram
     F->>F: Store token in localStorage
     F-->>U: Redirect to Dashboard
     end
+
 
 ```
 
