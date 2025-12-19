@@ -32,8 +32,8 @@ sequenceDiagram
     participant B as Backend
     participant DB as MongoDB
     participant G as Google OAuth
-    
-    rect rgb(200, 220, 255)
+
+    rect #C8DCFF
     Note over U,G: Traditional Login
     U->>F: Enter email & password
     F->>B: POST /api/auth/login
@@ -44,8 +44,8 @@ sequenceDiagram
     F->>F: Store token in localStorage
     F-->>U: Redirect to Dashboard
     end
-    
-    rect rgb(255, 220, 200)
+
+    rect #FFDCC8
     Note over U,G: Google OAuth Login
     U->>F: Click "Sign in with Google"
     F->>G: Redirect to Google
@@ -60,6 +60,7 @@ sequenceDiagram
     F->>F: Store token in localStorage
     F-->>U: Redirect to Dashboard
     end
+
 ```
 
 ---
