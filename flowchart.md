@@ -230,42 +230,43 @@ journey
 
 ```mermaid
 graph TD
-    Server[Express Server] --> Auth[/api/auth]
-    Server --> Quiz[/api/quiz]
-    Server --> Result[/api/result]
-    Server --> Contest[/api/contests]
-    Server --> Category[/api/categories]
-    Server --> Profile[/api/profile]
-    Server --> Admin[/api/superadmin]
+    Server["Express Server"] --> Auth["/api/auth"]
+    Server --> Quiz["/api/quiz"]
+    Server --> Result["/api/result"]
+    Server --> Contest["/api/contests"]
+    Server --> Category["/api/categories"]
+    Server --> Profile["/api/profile"]
+    Server --> Admin["/api/superadmin"]
     
-    Auth --> Login[POST /login]
-    Auth --> Signup[POST /createaccount]
-    Auth --> Google[POST /google-auth]
-    Auth --> Reset[POST /forgot-password]
-    Auth --> Logout[POST /logout]
+    Auth --> Login["POST /login"]
+    Auth --> Signup["POST /createaccount"]
+    Auth --> Google["POST /google-auth"]
+    Auth --> Reset["POST /forgot-password"]
+    Auth --> Logout["POST /logout"]
     
-    Quiz --> GetQuizzes[GET /quizzes<br/>🔒 Cache: 5min]
-    Quiz --> GetQuiz[GET /quizzes/:id<br/>🔒 Cache: 5min<br/>✓ Eligibility Check]
-    Quiz --> CreateQuiz[POST /createquiz<br/>👨‍💼 Admin Only<br/>⚠️ Invalidate Cache]
-    Quiz --> UpdateQuiz[PUT /update/:id<br/>👨‍💼 Admin Only<br/>⚠️ Invalidate Cache]
-    Quiz --> DeleteQuiz[DELETE /delete/:id<br/>👨‍💼 Admin Only<br/>⚠️ Invalidate Cache]
+    Quiz --> GetQuizzes["GET /quizzes\nCache: 5min"]
+    Quiz --> GetQuiz["GET /quizzes/:id\nCache: 5min\nEligibility Check"]
+    Quiz --> CreateQuiz["POST /createquiz\nAdmin Only\nInvalidate Cache"]
+    Quiz --> UpdateQuiz["PUT /update/:id\nAdmin Only\nInvalidate Cache"]
+    Quiz --> DeleteQuiz["DELETE /delete/:id\nAdmin Only\nInvalidate Cache"]
     
-    Result --> Submit[POST /submit<br/>⚠️ Invalidate Cache]
-    Result --> GetResults[GET /user<br/>🔒 Cache: 1min]
-    Result --> GetStats[GET /user/statistics<br/>🔒 Cache: 2min]
-    Result --> GetLeaderboard[GET /leaderboard/:quizId<br/>🔒 Cache: 1min]
+    Result --> Submit["POST /submit\nInvalidate Cache"]
+    Result --> GetResults["GET /user\nCache: 1min"]
+    Result --> GetStats["GET /user/statistics\nCache: 2min"]
+    Result --> GetLeaderboard["GET /leaderboard/:quizId\nCache: 1min"]
     
-    Contest --> GetContests[GET /<br/>🔒 Cache: 1min]
-    Contest --> GetContest[GET /:id<br/>🔒 Cache: 1min]
-    Contest --> JoinContest[POST /:id/join<br/>⚠️ Invalidate Cache]
-    Contest --> CreateContest[POST /create<br/>👨‍💼 Admin Only<br/>⚠️ Invalidate Cache]
-    Contest --> GetContestLeader[GET /:id/leaderboard<br/>🔒 Cache: 30sec]
+    Contest --> GetContests["GET /\nCache: 1min"]
+    Contest --> GetContest["GET /:id\nCache: 1min"]
+    Contest --> JoinContest["POST /:id/join\nInvalidate Cache"]
+    Contest --> CreateContest["POST /create\nAdmin Only\nInvalidate Cache"]
+    Contest --> GetContestLeader["GET /:id/leaderboard\nCache: 30sec"]
     
     style Server fill:#4a90e2
     style Auth fill:#f39c12
     style Quiz fill:#27ae60
     style Result fill:#e74c3c
     style Contest fill:#9b59b6
+
 ```
 
 ---
