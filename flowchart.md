@@ -26,18 +26,6 @@ graph TB
 ## 🔐 Authentication Flow
 
 ```mermaid
-%%{init: {
-  "theme": "dark",
-  "themeVariables": {
-    "primaryColor": "#1E1E1E",
-    "primaryTextColor": "#FFFFFF",
-    "lineColor": "#FFFFFF",
-    "actorTextColor": "#FFFFFF",
-    "noteTextColor": "#FFFFFF",
-    "sequenceNumberColor": "#FFFFFF"
-  }
-}}%%
-
 sequenceDiagram
     participant U as User
     participant F as Frontend
@@ -45,34 +33,31 @@ sequenceDiagram
     participant DB as MongoDB
     participant G as Google OAuth
 
-    rect #1E3A8A
-    Note over U,G: Traditional Login
-    U->>F: Enter email & password
-    F->>B: POST /api/auth/login
-    B->>DB: Find user by email
-    DB-->>B: User data
-    B->>B: Verify password (Bcrypt)
-    B-->>F: JWT Token + User data
-    F->>F: Store token in localStorage
-    F-->>U: Redirect to Dashboard
+    alt Traditional Login
+        U->>F: Enter email & password
+        F->>B: POST /api/auth/login
+        B->>DB: Find user by email
+        DB-->>B: User data
+        B->>B: Verify password (Bcrypt)
+        B-->>F: JWT Token + User data
+        F->>F: Store token in localStorage
+        F-->>U: Redirect to Dashboard
     end
 
-    rect #7F1D1D
-    Note over U,G: Google OAuth Login
-    U->>F: Click "Sign in with Google"
-    F->>G: Redirect to Google
-    G->>U: Request permissions
-    U->>G: Approve
-    G->>B: POST /api/auth/google with token
-    B->>G: Verify Google token
-    G-->>B: User profile data
-    B->>DB: Find or create user
-    DB-->>B: User data
-    B-->>F: JWT Token + User data
-    F->>F: Store token in localStorage
-    F-->>U: Redirect to Dashboard
+    alt Google OAuth Login
+        U->>F: Click "Sign in with Google"
+        F->>G: Redirect to Google
+        G->>U: Request permissions
+        U->>G: Approve
+        G->>B: POST /api/auth/google with token
+        B->>G: Verify Google token
+        G-->>B: User profile data
+        B->>DB: Find or create user
+        DB-->>B: User data
+        B-->>F: JWT Token + User data
+        F->>F: Store token in localStorage
+        F-->>U: Redirect to Dashboard
     end
-`
 
 
 ```
