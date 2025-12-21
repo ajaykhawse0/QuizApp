@@ -23,13 +23,13 @@ graph TB
     Auth -->|No| PublicRoutes[Public Routes]
     Auth -->|Yes| ProtectedRoutes[Protected Routes]
     
-    PublicRoutes --> Login[/login<br/>📝 Login Page]
-    PublicRoutes --> Signup[/signup<br/>✍️ Signup Page]
+    PublicRoutes --> Login[/login - Login Page]
+    PublicRoutes --> Signup[/signup - Signup Page]
     
-    ProtectedRoutes --> Home[/<br/>🏠 Quiz List Home]
-    ProtectedRoutes --> Profile[/profile<br/>👤 Profile Page]
-    ProtectedRoutes --> UploadProfile[/upload-profile<br/>📸 Upload Profile]
-    ProtectedRoutes --> ResetPwd[/reset-password/:token<br/>🔒 Reset Password]
+    ProtectedRoutes --> Home[/ - Quiz List Home]
+    ProtectedRoutes --> Profile[/profile - Profile Page]
+    ProtectedRoutes --> UploadProfile[/upload-profile - Upload Profile]
+    ProtectedRoutes --> ResetPwd[/reset-password/:token - Reset Password]
     
     ProtectedRoutes --> QuizSection{Quiz Section}
     ProtectedRoutes --> ResultSection{Results Section}
@@ -37,38 +37,39 @@ graph TB
     ProtectedRoutes --> ContestSection{Contest Section}
     ProtectedRoutes --> AdminSection{Admin Section}
     
-    QuizSection --> TakeQuiz[/quiz/:id<br/>📝 Take Quiz]
+    QuizSection --> TakeQuiz[/quiz/:id - Take Quiz]
     
-    ResultSection --> ResultsList[/results<br/>📊 Results List]
-    ResultSection --> ResultDetail[/result/:id<br/>📄 Result Detail]
+    ResultSection --> ResultsList[/results - Results List]
+    ResultSection --> ResultDetail[/result/:id - Result Detail]
     
-    StatsSection --> Statistics[/statistics<br/>📈 User Statistics]
-    StatsSection --> Progress[/progress<br/>📊 Progress Tracking]
-    StatsSection --> LeaderboardList[/leaderboard<br/>🏆 Leaderboard List]
-    StatsSection --> LeaderboardDetail[/leaderboard/:quizId<br/>🥇 Quiz Leaderboard]
+    StatsSection --> Statistics[/statistics - User Statistics]
+    StatsSection --> Progress[/progress - Progress Tracking]
+    StatsSection --> LeaderboardList[/leaderboard - Leaderboard List]
+    StatsSection --> LeaderboardDetail[/leaderboard/:quizId - Quiz Leaderboard]
     
-    ContestSection --> ContestList[/contests<br/>🎪 Contest List]
-    ContestSection --> ContestDetail[/contests/:id<br/>🎯 Contest Detail]
-    ContestSection --> ContestLeaderboard[/contests/:id/leaderboard<br/>🏅 Contest Leaderboard]
-    ContestSection --> MyContests[/my-contests<br/>📋 My Contests]
+    ContestSection --> ContestList[/contests - Contest List]
+    ContestSection --> ContestDetail[/contests/:id - Contest Detail]
+    ContestSection --> ContestLeaderboard[/contests/:id/leaderboard - Contest Leaderboard]
+    ContestSection --> MyContests[/my-contests - My Contests]
     
     AdminSection --> RoleCheck{Admin Role?}
     RoleCheck -->|Yes| AdminRoutes[Admin Routes]
-    RoleCheck -->|No| Redirect[❌ Access Denied]
+    RoleCheck -->|No| Redirect[Access Denied]
     
-    AdminRoutes --> AdminDashboard[/admin<br/>⚙️ Admin Dashboard]
-    AdminRoutes --> CreateQuiz[/admin/create<br/>➕ Create Quiz]
-    AdminRoutes --> UpdateQuiz[/admin/update/:id<br/>✏️ Update Quiz]
-    AdminRoutes --> SuperAdmin[/admin/superadmin/panel<br/>👑 Super Admin Panel]
-    AdminRoutes --> CreateContest[/contests/create<br/>🎪 Create Contest]
-    
-    style Start fill:#e1f5ff,stroke:#01579b,stroke-width:3px
-    style Login fill:#fff9c4,stroke:#f57f17,stroke-width:2px
-    style Signup fill:#fff9c4,stroke:#f57f17,stroke-width:2px
-    style Home fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
-    style AdminDashboard fill:#ffccbc,stroke:#d84315,stroke-width:2px
-    style SuperAdmin fill:#f8bbd0,stroke:#c2185b,stroke-width:3px
-    style Redirect fill:#ffcdd2,stroke:#c62828,stroke-width:2px
+    AdminRoutes --> AdminDashboard[/admin - Admin Dashboard]
+    AdminRoutes --> CreateQuiz[/admin/create - Create Quiz]
+    AdminRoutes --> UpdateQuiz[/admin/update/:id - Update Quiz]
+    AdminRoutes --> SuperAdmin[/admin/superadmin/panel - Super Admin Panel]
+    AdminRoutes --> CreateContest[/contests/create - Create Contest]
+
+    classDef start fill:#e1f5ff,stroke:#01579b,stroke-width:2px;
+    classDef admin fill:#ffccbc,stroke:#d84315,stroke-width:2px;
+    classDef public fill:#fff9c4,stroke:#f57f17,stroke-width:2px;
+    classDef protected fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px;
+    class Start start;
+    class Login,Signup public;
+    class Home protected;
+    class AdminDashboard admin;
 ```
 
 ---
