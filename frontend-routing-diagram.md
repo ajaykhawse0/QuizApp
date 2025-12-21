@@ -23,44 +23,45 @@ graph TB
     Auth -->|No| PublicRoutes[Public Routes]
     Auth -->|Yes| ProtectedRoutes[Protected Routes]
     
-    PublicRoutes --> Login[/login - Login Page]
-    PublicRoutes --> Signup[/signup - Signup Page]
+    PublicRoutes --> Login[/login/]
+    PublicRoutes --> Signup[/signup/]
     
-    ProtectedRoutes --> Home[/ - Quiz List Home]
-    ProtectedRoutes --> Profile[/profile - Profile Page]
-    ProtectedRoutes --> UploadProfile[/upload-profile - Upload Profile]
-    ProtectedRoutes --> ResetPwd[/reset-password/:token - Reset Password]
+    ProtectedRoutes --> Home[/home/]
+    ProtectedRoutes --> Profile[/profile/]
+    ProtectedRoutes --> UploadProfile[/upload-profile/]
+    ProtectedRoutes --> ResetPwd[/reset-password/:token/]
     
     ProtectedRoutes --> QuizSection{Quiz Section}
-    ProtectedRoutes --> ResultSection{Results Section}
+    ProtectedRoutes --> ResultSection{Result Section}
     ProtectedRoutes --> StatsSection{Statistics Section}
     ProtectedRoutes --> ContestSection{Contest Section}
     ProtectedRoutes --> AdminSection{Admin Section}
     
-    QuizSection --> TakeQuiz[/quiz/:id - Take Quiz]
+    QuizSection --> TakeQuiz[/quiz/:id/]
     
-    ResultSection --> ResultsList[/results - Results List]
-    ResultSection --> ResultDetail[/result/:id - Result Detail]
+    ResultSection --> ResultsList[/results/]
+    ResultSection --> ResultDetail[/result/:id/]
     
-    StatsSection --> Statistics[/statistics - User Statistics]
-    StatsSection --> Progress[/progress - Progress Tracking]
-    StatsSection --> LeaderboardList[/leaderboard - Leaderboard List]
-    StatsSection --> LeaderboardDetail[/leaderboard/:quizId - Quiz Leaderboard]
+    StatsSection --> Statistics[/statistics/]
+    StatsSection --> Progress[/progress/]
+    StatsSection --> LeaderboardList[/leaderboard/]
+    StatsSection --> LeaderboardDetail[/leaderboard/:quizId/]
     
-    ContestSection --> ContestList[/contests - Contest List]
-    ContestSection --> ContestDetail[/contests/:id - Contest Detail]
-    ContestSection --> ContestLeaderboard[/contests/:id/leaderboard - Contest Leaderboard]
-    ContestSection --> MyContests[/my-contests - My Contests]
+    ContestSection --> ContestList[/contests/]
+    ContestSection --> ContestDetail[/contests/:id/]
+    ContestSection --> ContestLeaderboard[/contests/:id/leaderboard/]
+    ContestSection --> MyContests[/my-contests/]
     
     AdminSection --> RoleCheck{Admin Role?}
     RoleCheck -->|Yes| AdminRoutes[Admin Routes]
     RoleCheck -->|No| Redirect[Access Denied]
     
-    AdminRoutes --> AdminDashboard[/admin - Admin Dashboard]
-    AdminRoutes --> CreateQuiz[/admin/create - Create Quiz]
-    AdminRoutes --> UpdateQuiz[/admin/update/:id - Update Quiz]
-    AdminRoutes --> SuperAdmin[/admin/superadmin/panel - Super Admin Panel]
-    AdminRoutes --> CreateContest[/contests/create - Create Contest]
+    AdminRoutes --> AdminDashboard[/admin/]
+    AdminRoutes --> CreateQuiz[/admin/create/]
+    AdminRoutes --> UpdateQuiz[/admin/update/:id/]
+    AdminRoutes --> SuperAdmin[/admin/superadmin/panel/]
+    AdminRoutes --> CreateContest[/contests/create/]
+
 
 ```
 
