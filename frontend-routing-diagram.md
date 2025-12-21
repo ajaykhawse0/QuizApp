@@ -62,14 +62,6 @@ graph TB
     AdminRoutes --> SuperAdmin[/admin/superadmin/panel - Super Admin Panel]
     AdminRoutes --> CreateContest[/contests/create - Create Contest]
 
-    classDef start fill:#e1f5ff,stroke:#01579b,stroke-width:2px;
-    classDef admin fill:#ffccbc,stroke:#d84315,stroke-width:2px;
-    classDef public fill:#fff9c4,stroke:#f57f17,stroke-width:2px;
-    classDef protected fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px;
-    class Start start;
-    class Login,Signup public;
-    class Home protected;
-    class AdminDashboard admin;
 ```
 
 ---
