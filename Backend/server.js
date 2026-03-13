@@ -36,13 +36,15 @@ app.set("trust proxy", 1);
  * CORS configuration
  */
 const corsOptions = {
-  origin: [process.env.CORS_ORIGIN],
+  origin: process.env.CORS_ORIGIN.split(","),
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
   allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
   exposedHeaders: ["Content-Type", "Authorization"],
   optionsSuccessStatus: 200,
 };
+
+app.use(cors(corsOptions));
 
 /**
  * Rate limiter
