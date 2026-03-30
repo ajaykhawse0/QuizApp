@@ -210,7 +210,7 @@ async function handleGetResultById(req, res) {
         if (!isAdmin && result.userId._id.toString() !== userId.toString()) {
             return res.status(403).json({ message: "Access denied" });
         }
-        console.log(result);
+     
         
 
         // Get detailed question breakdown
