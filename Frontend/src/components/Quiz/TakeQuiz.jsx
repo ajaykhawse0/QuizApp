@@ -21,10 +21,18 @@ const TakeQuiz = () => {
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [showEligibilityError, setShowEligibilityError] = useState(false);
   const [eligibilityData, setEligibilityData] = useState(null);
+  
+  // Anti-cheat states
+  const [quizStarted, setQuizStarted] = useState(false);
+  const [warnings, setWarnings] = useState(0);
+  const [showWarningModal, setShowWarningModal] = useState(false);
+  const [warningMessage, setWarningMessage] = useState('');
 
   const didRun = useRef(false);
   const isSubmittingRef = useRef(false);
   const pendingNavigationRef = useRef(false);
+  const warningsRef = useRef(0);
+  const lastViolationTimeRef = useRef(0);
 
   useEffect(() => {
     if (didRun.current) return;
@@ -33,12 +41,12 @@ const TakeQuiz = () => {
   }, [id]);
 
   useEffect(() => {
-    if (quiz && !startTime) {
+    if (quiz && quizStarted && !startTime) {
       setTimeLeft(quiz.timeLimit);
       setStartTime(Date.now());
       setAnswers(new Array(quiz.questions.length).fill(null));
     }
-  }, [quiz]);
+  }, [quiz, quizStarted, startTime]);
 
   useEffect(() => {
     if (timeLeft > 0 && startTime) {
@@ -58,7 +66,7 @@ const TakeQuiz = () => {
 
   // Warning and auto-submit on page unload, refresh, or back navigation
   useEffect(() => {
-    if (!quiz || !startTime) return;
+    if (!quiz || !startTime || !quizStarted) return;
 
     // Function to handle beforeunload (refresh, close tab)
     const handleBeforeUnload = (e) => {
@@ -83,19 +91,97 @@ const TakeQuiz = () => {
       pendingNavigationRef.current = true;
     };
 
+    // Anti-cheat: Handle tab switching or window blur
+    const handleVisibilityChange = () => {
+      if (document.hidden && !isSubmittingRef.current && quizStarted) {
+        handleViolation("Tab switching or minimizing the window is not allowed.");
+      }
+    };
+
+    // Anti-cheat: Handle clicking outside the window
+    const handleBlur = () => {
+      // Ignore blur if we are already submitting or the document still has focus
+      if (!isSubmittingRef.current && quizStarted && !document.hasFocus()) {
+        handleViolation("Clicking outside the quiz window or switching tabs is not allowed.");
+      }
+    };
+
+    // Anti-cheat: Handle exiting fullscreen
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement && !isSubmittingRef.current && quizStarted) {
+        handleViolation("Exiting full screen is not allowed during the quiz.");
+      }
+    };
+
     // Push initial state to detect back button
     window.history.pushState(null, '', window.location.pathname);
 
     // Add event listeners
     window.addEventListener('beforeunload', handleBeforeUnload);
     window.addEventListener('popstate', handlePopState);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('blur', handleBlur);
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
 
     // Cleanup
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       window.removeEventListener('popstate', handlePopState);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('blur', handleBlur);
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
     };
-  }, [quiz, startTime, answers]);
+  }, [quiz, startTime, answers, quizStarted]);
+
+  const handleViolation = (message) => {
+    // Debounce to prevent multiple immediate triggers (e.g., blur + visibilitychange right after each other)
+    const now = Date.now();
+    if (now - lastViolationTimeRef.current < 2000) return;
+    lastViolationTimeRef.current = now;
+
+    const currentWarnings = warningsRef.current;
+    
+    // Auto-submit on 3rd warning (which means they already had 2)
+    if (currentWarnings >= 2) {
+      alert("You have exceeded the maximum number of warnings (3). Your quiz is being automatically submitted.");
+      handleAutoSubmit().then(() => {
+        // Fallback navigation if auto-submit doesn't redirect
+        navigate('/results', { replace: true });
+      });
+      return;
+    }
+    
+    // Increment warnings
+    warningsRef.current = currentWarnings + 1;
+    setWarnings(warningsRef.current);
+    setWarningMessage(`${message} Warning ${warningsRef.current} of 3.`);
+    setShowWarningModal(true);
+  };
+  
+  const resumeFullscreenAndQuiz = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      }
+      setShowWarningModal(false);
+    } catch (err) {
+      console.error("Error attempting to enable fullscreen:", err);
+      // If we can't get fullscreen, they still need to close the modal
+      setShowWarningModal(false);
+    }
+  };
+
+  const startQuizFlow = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      }
+      setQuizStarted(true);
+    } catch (err) {
+      alert("Failed to enter full screen. Full screen is required to take this quiz.");
+      console.error("Error enabling full screen:", err);
+    }
+  };
 
   const fetchQuiz = async () => {
     try {
@@ -343,6 +429,7 @@ const TakeQuiz = () => {
     );
   }
 
+  // Show custom error if quiz fetching failed
   if (error || !quiz) {
     return (
       <div className="bg-red-50 dark:bg-red-900/20 border border-red-300 dark:border-red-700 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg shadow-sm">
@@ -356,6 +443,63 @@ const TakeQuiz = () => {
     return (
       <div className="text-center py-12 text-gray-600 dark:text-gray-400">
         <p>Quiz questions not available</p>
+      </div>
+    );
+  }
+
+  // Pre-quiz screen requiring fullscreen
+  if (!quizStarted) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 md:px-0">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 md:p-12 text-center animate-in fade-in zoom-in duration-300">
+          <div className="w-20 h-20 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg
+              className="w-10 h-10 text-indigo-600 dark:text-indigo-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m0 0v2m0-2h4m-4 0H8m4-10a4 4 0 110 8 4 4 0 010-8zm-8 4h.01M20 11h.01M16 11h.01M8 11h.01" />
+            </svg>
+          </div>
+          <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+            Rules & Regulations
+          </h2>
+          <div className="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-6 mb-8 text-left border border-orange-200 dark:border-orange-800/50">
+            <h3 className="text-lg font-semibold text-orange-800 dark:text-orange-400 mb-3 flex items-center gap-2">
+               Strict Anti-Cheat constraints are applied!
+            </h3>
+            <ul className="space-y-3 text-orange-700 dark:text-orange-300">
+              <li className="flex items-start">
+                <svg className="w-5 h-5 mr-3 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                </svg>
+                This quiz must be taken in Full Screen mode.
+              </li>
+              <li className="flex items-start">
+                <svg className="w-5 h-5 mr-3 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                Exiting Full Screen, switching tabs, minimizing, or split-screening will result in a warning.
+              </li>
+              <li className="flex items-start font-bold">
+                <svg className="w-5 h-5 mr-3 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                Auto-Submit: After 3 warnings, the quiz will be submitted and ended automatically. No exceptions.
+              </li>
+            </ul>
+          </div>
+          <button
+            onClick={startQuizFlow}
+            className="w-full sm:w-auto px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-all transform hover:scale-105 shadow-lg flex items-center justify-center gap-2"
+          >
+            <span>I Understand, Start Quiz in Fullscreen</span>
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
       </div>
     );
   }
@@ -539,6 +683,48 @@ const TakeQuiz = () => {
                 Submit & Leave
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Warning Modal */}
+      {showWarningModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-red-900/40 backdrop-blur-md">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-8 max-w-md w-full border-t-4 border-red-500 animate-in fade-in zoom-in duration-300">
+            <div className="flex justify-center mb-6">
+              <div className="w-20 h-20 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                <svg className="w-10 h-10 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+            </div>
+            <h3 className="text-2xl font-bold text-center text-gray-900 dark:text-white mb-4">
+              Violation Detected
+            </h3>
+            <p className="text-gray-600 dark:text-gray-300 text-center mb-8 font-medium">
+              {warningMessage}
+            </p>
+            <div className="mb-8">
+              <div className="flex justify-between text-sm mb-2 font-semibold">
+                <span className="text-gray-600 dark:text-gray-400">Warnings</span>
+                <span className="text-red-600 dark:text-red-400">{warnings} / 3</span>
+              </div>
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+                <div 
+                  className="bg-red-500 h-3 rounded-full transition-all duration-500" 
+                  style={{ width: `${(warnings / 3) * 100}%` }}
+                ></div>
+              </div>
+            </div>
+            <button
+              onClick={resumeFullscreenAndQuiz}
+              className="w-full px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold transition-all shadow-md flex items-center justify-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+              </svg>
+              Return to Fullscreen
+            </button>
           </div>
         </div>
       )}
