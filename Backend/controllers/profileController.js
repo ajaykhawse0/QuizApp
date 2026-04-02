@@ -81,7 +81,6 @@ async function handleProfilePic(req, res) {
       if (publicId) {
         await cloudinary.uploader.destroy(publicId);
       }
-      console.log("Old profile picture deleted:");
     }
 
     // Upload the new image
@@ -96,7 +95,7 @@ async function handleProfilePic(req, res) {
 
     // Delete temp file
     fs.unlink(req.file.path, (error) => {
-      if (error) console.log("Error deleting temp file:", error);
+      if (error) console.error("Error deleting temp file:", error);
     });
 
     return res.status(200).json({
@@ -110,7 +109,7 @@ async function handleProfilePic(req, res) {
     console.error("Profile Picture Error:", err);
     if (req.file && req.file.path) {
       fs.unlink(req.file.path, (error) => {
-        if (error) console.log("Error deleting temp file:", error);
+        if (error) console.error("Error deleting temp file:", error);
       });
     }
     return res
@@ -144,7 +143,6 @@ async function handleUpdateProfile(req, res) {
         if (publicId) {
           await cloudinary.uploader.destroy(publicId);
         }
-        console.log("Old profile picture deleted:");
       }
 
       // Upload the new image

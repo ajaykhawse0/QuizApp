@@ -115,12 +115,10 @@ connectDB(MONGO_DB_URL);
  * Redis connection (optional)
  */
 connectRedis().catch(() => {
-  console.log("Redis not available, continuing without cache");
+  // Redis is optional for this app; continue without cache.
 });
 
 /**
  * Start server
  */
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
-});
+app.listen(PORT);

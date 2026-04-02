@@ -20,18 +20,6 @@ const connectRedis = async () => {
       },
     });
 
-    redisClient.on("connect", () => {
-      console.log("Redis connecting...");
-    });
-
-    redisClient.on("ready", () => {
-      console.log("Redis connected and ready");
-    });
-
-    redisClient.on("reconnecting", () => {
-      console.log("Redis reconnecting...");
-    });
-
     redisClient.on("error", (err) => {
       console.error("Redis error:", err.message);
     });

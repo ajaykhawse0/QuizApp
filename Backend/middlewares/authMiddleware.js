@@ -25,7 +25,7 @@ req.user = user;
  next();
     }
     catch(err){
-        console.log("Token Verification failed",err.message);
+        console.error("Token Verification failed",err.message);
         
         return res.status(401).json({message:"Unauthorized: Invalid token"});
     }

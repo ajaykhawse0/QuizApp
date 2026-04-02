@@ -516,9 +516,6 @@ async function handleGetUserStatistics(req, res) {
                 .filter(r => r.quizId) // Only include results that have a valid quiz
                 .map(r => r.quizId.title)
         )];
-        if(!quizzesAttempted){
-            console.log("No quizzes attempted found for user:", userId);
-        }
 
         return res.status(200).json({
             statistics: {

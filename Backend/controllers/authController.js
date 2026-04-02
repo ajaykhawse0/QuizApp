@@ -252,8 +252,6 @@ async function handleForgetPassword(req, res) {
       }
     );
 
-    console.log("Email sent successfully via Brevo:", brevoResponse.data);
-
     return res.status(200).json({
       message: "Password reset link sent successfully! It expires in 10 minutes.",
     });

@@ -8,7 +8,6 @@ function connectDB(url) {
 
 
 mongoose.connect(url)
-  .then(() => console.log("MongoDB Atlas Connected Successfully"))
   .catch((err) => console.error(" MongoDB Connection Error:", err.message));
 
 }

@@ -32,7 +32,6 @@ passport.use(
 
           const salt = await bcrypt.genSalt(10);
           const hashedPassword = await bcrypt.hash(randomPassword, salt);
-             console.log(profile);
              
           //save user to db
           user = new User({
