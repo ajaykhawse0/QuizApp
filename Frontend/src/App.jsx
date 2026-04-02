@@ -31,6 +31,7 @@ import ContestList from "./components/Contest/ContestList";
 import ContestDetail from "./components/Contest/ContestDetail";
 import ContestLeaderboard from "./components/Contest/ContestLeaderboard";
 import CreateContest from "./components/Contest/CreateContest";
+import UpdateContest from "./components/Contest/UpdateContest";
 import MyContests from "./components/Contest/MyContests";
 const AppRoutes = () => {
   const { isAuthenticated } = useAuth();
@@ -209,6 +210,16 @@ const AppRoutes = () => {
           <ProtectedRoute adminOnly>
             <Layout>
               <CreateContest />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/contests/update/:id"
+        element={
+          <ProtectedRoute adminOnly>
+            <Layout>
+              <UpdateContest />
             </Layout>
           </ProtectedRoute>
         }

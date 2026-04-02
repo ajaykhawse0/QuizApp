@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, ArrowRight } from 'lucide-react';
 import { authAPI } from '../../services/api';
 import GoogleLoginButton from './GoogleLoginButton';
 
@@ -11,8 +11,9 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [forgotEmail, setForgotEmail] = useState(''); // For forgot password
-  const [forgotMode, setForgotMode] = useState(false); // Toggle forgot-password form
+  
+  const [forgotEmail, setForgotEmail] = useState(''); 
+  const [forgotMode, setForgotMode] = useState(false); 
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -29,69 +30,53 @@ const Login = () => {
     setLoading(false);
   };
 
-  
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
 
-
-const handleForgotPassword = async (e) => {
-  e.preventDefault();
-  setError('');
-  setLoading(true);
-
-  try {
-   
-    const response = await authAPI.forgotPassword({ email: forgotEmail });
-
-    if (response?.data?.message) {
-      
-      alert(response.data.message);
-    } else {
-      alert('Password reset link sent successfully. Check your email.');
-    navigate("https://mail.google.com");
-
- 
-    setForgotEmail('');
+    try {
+      const response = await authAPI.forgotPassword({ email: forgotEmail });
+      if (response?.data?.message) {
+        alert(response.data.message);
+      } else {
+        alert('Password reset link sent successfully. Check your email.');
+        navigate("https://mail.google.com");
+      }
+      setForgotEmail(''); 
+    } catch (err) {
+      console.error('Forgot Password Error:', err);
+      setError(
+        err.response?.data?.message || 
+        'Failed to send reset link. Please try again later.'
+      );
+    } finally {
+      setLoading(false);
     }
-
-    setForgotEmail(''); 
-  } catch (err) {
-    console.error('Forgot Password Error:', err);
-
-
-    setError(
-      err.response?.data?.message || 
-      'Failed to send reset link. Please try again later.'
-    );
-  } finally {
-    setLoading(false);
-  }
-};
-
+  };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-10 sm:px-6 lg:px-8 
-                    bg-gradient-to-br from-primary-50 via-primary-100 to-primary-200 
-                    dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 
-                    transition-colors duration-500">
-      <div className="w-full max-w-md backdrop-blur-lg bg-white/80 dark:bg-gray-800/80 
-                      border border-gray-200 dark:border-gray-700 rounded-2xl shadow-2xl p-8 
-                      space-y-8 transform transition-transform duration-300 hover:scale-[1.02]">
-        <div className="text-center">
-          <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white">
-            {forgotMode ? 'Reset your password' : 'Welcome Back 👋'}
+    <div className="flex items-center justify-center min-h-[80vh] px-4 sm:px-6 lg:px-8 py-12">
+      <div className="w-full max-w-[420px] bg-white dark:bg-gray-900 rounded-2xl shadow-soft-xl border border-gray-100 dark:border-gray-800 p-8 sm:p-10 transition-all duration-300">
+        
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 mb-4">
+            <Lock className="w-6 h-6" />
+          </div>
+          <h2 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
+            {forgotMode ? 'Reset your password' : 'Welcome back'}
           </h2>
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
             {forgotMode ? (
-              <>
-                Enter your email below to receive a reset link.
-              </>
+              "Enter your email to receive a reset link."
             ) : (
               <>
-                Sign in to continue or{' '}
+                Don't have an account?{' '}
                 <Link
                   to="/signup"
-                  className="font-medium text-primary-600 dark:text-primary-400 hover:underline"
+                  className="font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 transition-colors"
                 >
-                  create an account
+                  Create one
                 </Link>
               </>
             )}
@@ -99,28 +84,23 @@ const handleForgotPassword = async (e) => {
         </div>
 
         {error && (
-          <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg shadow-sm text-sm">
-            {error}
+          <div className="mb-6 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 p-4 rounded-r-lg">
+            <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
           </div>
         )}
 
-        {/* LOGIN FORM */}
         {!forgotMode ? (
-          <form className="space-y-6" onSubmit={handleSubmit}>
+          <form className="space-y-5" onSubmit={handleSubmit}>
             <div className="space-y-4">
               {/* Email Field */}
               <div>
-                <label
-                  htmlFor="email"
-                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-                >
+                <label htmlFor="email" className="block text-sm font-medium text-gray-900 dark:text-gray-200 mb-1.5">
                   Email address
                 </label>
                 <div className="relative">
-                  <Mail
-                    size={18}
-                    className="absolute left-3 top-3 text-gray-500 dark:text-gray-400"
-                  />
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                    <Mail className="h-5 w-5 text-gray-400" />
+                  </div>
                   <input
                     id="email"
                     type="email"
@@ -128,28 +108,30 @@ const handleForgotPassword = async (e) => {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-10 pr-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 
-                               dark:bg-gray-700 dark:text-gray-100 placeholder-gray-400 
-                               focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 
-                               transition"
-                    placeholder="example@email.com"
+                    className="block w-full pl-11 pr-3 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl leading-5 bg-gray-50 dark:bg-gray-800/50 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors sm:text-sm"
+                    placeholder="you@example.com"
                   />
                 </div>
               </div>
 
               {/* Password Field */}
               <div>
-                <label
-                  htmlFor="password"
-                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-                >
-                  Password
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label htmlFor="password" className="block text-sm font-medium text-gray-900 dark:text-gray-200">
+                    Password
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setForgotMode(true)}
+                    className="text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 transition-colors"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
                 <div className="relative">
-                  <Lock
-                    size={18}
-                    className="absolute left-3 top-3 text-gray-500 dark:text-gray-400"
-                  />
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                    <Lock className="h-5 w-5 text-gray-400" />
+                  </div>
                   <input
                     id="password"
                     type={showPassword ? 'text' : 'password'}
@@ -157,126 +139,94 @@ const handleForgotPassword = async (e) => {
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-10 pr-10 py-2 rounded-lg border border-gray-300 dark:border-gray-600 
-                               dark:bg-gray-700 dark:text-gray-100 placeholder-gray-400 
-                               focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 
-                               transition"
+                    className="block w-full pl-11 pr-11 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl leading-5 bg-gray-50 dark:bg-gray-800/50 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors sm:text-sm"
                     placeholder="••••••••"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-3 flex items-center text-gray-500 dark:text-gray-300"
+                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-400 hover:text-gray-500 focus:outline-none"
                   >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </button>
                 </div>
               </div>
             </div>
 
-            {/* Forgot password toggle */}
-            <div className="text-right">
-              <button
-                type="button"
-                onClick={() => setForgotMode(true)}
-                className="text-sm text-primary-600 dark:text-primary-400 hover:underline"
-              >
-                Forgot password?
-              </button>
+            {/* Login Button */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full flex justify-center items-center gap-2 py-2.5 px-4 border border-transparent rounded-xl shadow-sm text-sm font-semibold text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              {loading ? (
+                <span className="flex items-center gap-2">
+                  <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                  </svg>
+                  Signing in...
+                </span>
+              ) : (
+                <>
+                  Sign in
+                  <ArrowRight className="w-4 h-4 ml-1" />
+                </>
+              )}
+            </button>
+            
+            <div className="relative mt-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-200 dark:border-gray-800"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white dark:bg-gray-900 text-gray-500">Or continue with</span>
+              </div>
             </div>
 
-            {/* Login Button */}
-            <div className="pt-2">
-              <button
-                type="submit"
-                disabled={loading}
-                className="relative w-full py-2.5 px-4 rounded-lg text-sm font-semibold text-white 
-                           bg-gradient-to-r from-primary-600 to-primary-700 
-                           hover:from-primary-700 hover:to-primary-800
-                           focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500
-                           disabled:opacity-50 disabled:cursor-not-allowed
-                           shadow-lg hover:shadow-primary-500/30
-                           transition-all duration-300"
-              >
-                {loading ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <svg
-                      className="animate-spin h-4 w-4 text-white"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      ></circle>
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-                      ></path>
-                    </svg>
-                    Signing in...
-                  </span>
-                ) : (
-                  'Sign In'
-                )}
-              </button>
+            <div className="mt-6 flex justify-center">
+              <GoogleLoginButton />
             </div>
-            <p className="text-center text-gray-500 dark:text-gray-400 py-2">or </p>
-           <div className="flex justify-center text-black">
-            <GoogleLoginButton /></div>
           </form>
-     
         ) : (
-          // 🔹 Forgot Password Form
-          <form className="space-y-6" onSubmit={handleForgotPassword}>
+          // Forgot Password Form
+          <form className="space-y-5" onSubmit={handleForgotPassword}>
             <div>
-              <label
-                htmlFor="forgotEmail"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-              >
-                Enter your email
+              <label htmlFor="forgotEmail" className="block text-sm font-medium text-gray-900 dark:text-gray-200 mb-1.5">
+                Email address
               </label>
-              <input
-                id="forgotEmail"
-                type="email"
-                required
-                value={forgotEmail}
-                onChange={(e) => setForgotEmail(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 
-                           dark:bg-gray-700 dark:text-gray-100 placeholder-gray-400 
-                           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 
-                           transition"
-                placeholder="your@email.com"
-              />
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                  <Mail className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  id="forgotEmail"
+                  type="email"
+                  required
+                  value={forgotEmail}
+                  onChange={(e) => setForgotEmail(e.target.value)}
+                  className="block w-full pl-11 pr-3 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl leading-5 bg-gray-50 dark:bg-gray-800/50 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-colors sm:text-sm"
+                  placeholder="you@example.com"
+                />
+              </div>
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 px-4 rounded-lg text-sm font-semibold text-white 
-                         bg-gradient-to-r from-primary-600 to-primary-700 
-                         hover:from-primary-700 hover:to-primary-800
-                         focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500
-                         disabled:opacity-50 disabled:cursor-not-allowed
-                         shadow-lg hover:shadow-primary-500/30
-                         transition-all duration-300"
+              className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-xl shadow-sm text-sm font-semibold text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
-              {loading ? 'Sending...' : 'Send Reset Link'}
+              {loading ? 'Sending link...' : 'Send reset link'}
             </button>
 
-            <div className="text-center">
+            <div className="text-center mt-6">
               <button
                 type="button"
                 onClick={() => setForgotMode(false)}
-                className="text-sm mt-3 text-gray-600 dark:text-gray-300 hover:underline"
+                className="text-sm font-medium text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors flex items-center justify-center w-full gap-2"
               >
-                Back to login
+                <ArrowRight className="w-4 h-4 rotate-180" />
+                Back to sign in
               </button>
             </div>
           </form>

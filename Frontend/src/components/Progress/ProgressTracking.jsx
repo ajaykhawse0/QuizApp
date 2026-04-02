@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { resultAPI } from '../../services/api';
 import LoadingSpinner from '../Common/LoadingSpinner';
+import { Target, Activity, Clock, Hash, TrendingUp } from 'lucide-react';
 import {
   LineChart,
   Line,
@@ -41,34 +42,43 @@ const ProgressTracking = () => {
   };
 
   if (loading) {
-    return <LoadingSpinner />;
+    return (
+      <div className="flex justify-center items-center min-h-[50vh]">
+        <LoadingSpinner />
+      </div>
+    );
   }
 
   if (error) {
     return (
-      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded">
-        {error}
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 p-4 rounded-r-xl shadow-sm">
+          <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
+        </div>
       </div>
     );
   }
 
   if (results.length === 0) {
     return (
-      <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg shadow">
-        <p className="text-gray-500 dark:text-gray-400 text-lg mb-4">No progress data available yet.</p>
-        <p className="text-gray-400 dark:text-gray-500 text-sm">Take some quizzes to see your progress!</p>
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="text-center py-20 bg-gray-50/50 dark:bg-gray-900/50 rounded-3xl border border-gray-100 dark:border-gray-800">
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-indigo-50 dark:bg-indigo-900/20 text-indigo-500 dark:text-indigo-400 mb-6">
+            <TrendingUp className="w-10 h-10" />
+          </div>
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No progress data</h3>
+          <p className="text-gray-500 dark:text-gray-400 mb-0">Take some quizzes to visualize your learning journey!</p>
+        </div>
       </div>
     );
   }
 
   // Process data for charts
   const processChartData = () => {
-    // Sort by date
     const sortedResults = [...results].sort((a, b) => 
       new Date(a.submittedAt) - new Date(b.submittedAt)
     );
 
-    // Data for quizzes solved over time
     const quizzesOverTime = sortedResults.map((result, index) => ({
       attempt: index + 1,
       date: new Date(result.submittedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
@@ -76,7 +86,6 @@ const ProgressTracking = () => {
       quiz: result.quizTitle?.substring(0, 15) + '...' || 'Quiz'
     }));
 
-    // Data for score distribution
     const scoreRanges = {
       '90-100%': 0,
       '70-89%': 0,
@@ -97,7 +106,6 @@ const ProgressTracking = () => {
       count
     }));
 
-    // Data for performance by quiz (top 10)
     const quizPerformance = {};
     results.forEach(result => {
       const quizName = result.quizTitle || 'Unknown Quiz';
@@ -125,7 +133,6 @@ const ProgressTracking = () => {
       .sort((a, b) => b.avgScore - a.avgScore)
       .slice(0, 10);
 
-    // Monthly progress data
     const monthlyData = {};
     results.forEach(result => {
       const date = new Date(result.submittedAt);
@@ -160,147 +167,159 @@ const ProgressTracking = () => {
   };
 
   const chartData = processChartData();
-  const COLORS = ['#0ea5e9', '#10b981', '#f59e0b', '#ef4444'];
 
-  // Calculate statistics
+  // Statistics
   const totalQuizzes = results.length;
   const avgScore = results.reduce((sum, r) => sum + r.percentage, 0) / totalQuizzes;
   const uniqueQuizzes = new Set(results.map(r => r.quizTitle)).size;
   const totalTimeSpent = results.reduce((sum, r) => sum + r.timeTaken, 0);
 
   return (
-    <div className="pb-8">
-      <div className="mb-6 md:mb-8">
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2">Progress Tracking</h1>
-        <p className="text-gray-600 dark:text-gray-400 text-sm md:text-base">Visualize your learning journey and performance</p>
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="mb-10 border-b border-gray-200 dark:border-gray-800 pb-6">
+        <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-gray-900 dark:text-white mb-2">Progress Analytics</h1>
+        <p className="text-gray-500 dark:text-gray-400">Deep dive into your learning patterns and quiz metrics over time.</p>
       </div>
 
-      {/* Statistics Overview */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 md:p-6">
-          <div className="text-2xl md:text-3xl font-bold text-primary-600 dark:text-primary-400 mb-2">{totalQuizzes}</div>
-          <div className="text-xs md:text-sm text-gray-600 dark:text-gray-400">Total Attempts</div>
-        </div>
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 md:p-6">
-          <div className="text-2xl md:text-3xl font-bold text-green-600 dark:text-green-400 mb-2">{avgScore.toFixed(1)}%</div>
-          <div className="text-xs md:text-sm text-gray-600 dark:text-gray-400">Average Score</div>
-        </div>
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 md:p-6">
-          <div className="text-2xl md:text-3xl font-bold text-blue-600 dark:text-blue-400 mb-2">{uniqueQuizzes}</div>
-          <div className="text-xs md:text-sm text-gray-600 dark:text-gray-400">Unique Quizzes</div>
-        </div>
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 md:p-6">
-          <div className="text-2xl md:text-3xl font-bold text-purple-600 dark:text-purple-400 mb-2">
-            {Math.floor(totalTimeSpent / 60)}m
+      {/* Overview Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+        <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-soft border border-gray-100 dark:border-gray-800 p-6 flex items-center justify-between group hover:shadow-soft-xl transition-all">
+          <div>
+            <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Total Attempts</div>
+            <div className="text-4xl font-bold text-gray-900 dark:text-white group-hover:text-primary-600 transition-colors">{totalQuizzes}</div>
           </div>
-          <div className="text-xs md:text-sm text-gray-600 dark:text-gray-400">Total Time Spent</div>
+          <div className="w-14 h-14 rounded-full bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center text-primary-600 dark:text-primary-400">
+            <Activity className="w-7 h-7" />
+          </div>
+        </div>
+        <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-soft border border-gray-100 dark:border-gray-800 p-6 flex items-center justify-between group hover:shadow-soft-xl transition-all">
+          <div>
+            <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Average Score</div>
+            <div className="text-4xl font-bold text-gray-900 dark:text-white group-hover:text-emerald-600 transition-colors">{avgScore.toFixed(1)}%</div>
+          </div>
+          <div className="w-14 h-14 rounded-full bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+            <Target className="w-7 h-7" />
+          </div>
+        </div>
+        <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-soft border border-gray-100 dark:border-gray-800 p-6 flex items-center justify-between group hover:shadow-soft-xl transition-all">
+          <div>
+            <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Unique Quizzes</div>
+            <div className="text-4xl font-bold text-gray-900 dark:text-white group-hover:text-purple-600 transition-colors">{uniqueQuizzes}</div>
+          </div>
+          <div className="w-14 h-14 rounded-full bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center text-purple-600 dark:text-purple-400">
+            <Hash className="w-7 h-7" />
+          </div>
+        </div>
+        <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-soft border border-gray-100 dark:border-gray-800 p-6 flex items-center justify-between group hover:shadow-soft-xl transition-all">
+          <div>
+            <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Total Time Spent</div>
+            <div className="text-4xl font-bold text-gray-900 dark:text-white group-hover:text-blue-600 transition-colors">{Math.floor(totalTimeSpent / 60)}m</div>
+          </div>
+          <div className="w-14 h-14 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 dark:text-blue-400">
+            <Clock className="w-7 h-7" />
+          </div>
         </div>
       </div>
 
-      {/* Charts Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-6">
-        {/* Score Progress Over Time */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 md:p-6">
-          <h2 className="text-lg md:text-xl font-bold text-gray-900 dark:text-white mb-4">Score Progress Over Time</h2>
-          <ResponsiveContainer width="100%" height={250}>
-            <AreaChart data={chartData.quizzesOverTime}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-gray-700" />
-              <XAxis 
-                dataKey="attempt" 
-                stroke="#6b7280"
-                className="dark:stroke-gray-400"
-                label={{ value: 'Attempt Number', position: 'insideBottom', offset: -5, style: { fill: '#6b7280' } }}
-                tick={{ fill: '#6b7280' }}
-              />
-              <YAxis 
-                stroke="#6b7280"
-                className="dark:stroke-gray-400"
-                label={{ value: 'Score (%)', angle: -90, position: 'insideLeft', style: { fill: '#6b7280' } }}
-                domain={[0, 100]}
-                tick={{ fill: '#6b7280' }}
-              />
-              <Tooltip 
-                contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px', color: '#fff' }}
-                formatter={(value) => [`${value}%`, 'Score']}
-                labelFormatter={(label) => `Attempt ${label}`}
-              />
-              <Area 
-                type="monotone" 
-                dataKey="score" 
-                stroke="#0ea5e9" 
-                fill="#0ea5e9" 
-                fillOpacity={0.3}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+      {/* Main Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        {/* Growth Tracker */}
+        <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-soft border border-gray-100 dark:border-gray-800 p-6 w-full">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Learning Curve</h2>
+          <div className="h-64 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData.quizzesOverTime}>
+                <defs>
+                  <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.4}/>
+                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" className="dark:stroke-gray-800" />
+                <XAxis dataKey="attempt" axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 12}} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 12}} domain={[0, 100]} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: '#111827', borderRadius: '12px', border: 'none', color: '#fff', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  formatter={(value) => [`${value}%`, 'Score']}
+                  labelFormatter={(label) => `Attempt ${label}`}
+                />
+                <Area type="monotone" dataKey="score" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorScore)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
         {/* Score Distribution */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 md:p-6">
-          <h2 className="text-lg md:text-xl font-bold text-gray-900 dark:text-white mb-4">Score Distribution</h2>
-          <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={chartData.scoreDistribution}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-gray-700" />
-              <XAxis dataKey="range" stroke="#6b7280" className="dark:stroke-gray-400" tick={{ fill: '#6b7280' }} />
-              <YAxis stroke="#6b7280" className="dark:stroke-gray-400" tick={{ fill: '#6b7280' }} />
-              <Tooltip 
-                contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px', color: '#fff' }}
-                formatter={(value) => [`${value} quizzes`, 'Count']} 
-              />
-              <Bar dataKey="count" fill="#0ea5e9" radius={[8, 8, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+        <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-soft border border-gray-100 dark:border-gray-800 p-6 w-full">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Score Distribution</h2>
+          <div className="h-64 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData.scoreDistribution}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" className="dark:stroke-gray-800" />
+                <XAxis dataKey="range" axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 12}} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 12}} />
+                <Tooltip
+                  cursor={{fill: '#f3f4f6', className: 'dark:fill-gray-800'}}
+                  contentStyle={{ backgroundColor: '#111827', borderRadius: '12px', border: 'none', color: '#fff' }}
+                  formatter={(value) => [value, 'Quizzes']}
+                />
+                <Bar dataKey="count" fill="#4f46e5" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </div>
 
-      {/* Monthly Progress */}
-      {chartData.monthlyProgress.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 md:p-6 mb-6">
-          <h2 className="text-lg md:text-xl font-bold text-gray-900 dark:text-white mb-4">Monthly Progress</h2>
-          <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={chartData.monthlyProgress}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-gray-700" />
-              <XAxis dataKey="month" stroke="#6b7280" className="dark:stroke-gray-400" tick={{ fill: '#6b7280' }} />
-              <YAxis stroke="#6b7280" className="dark:stroke-gray-400" tick={{ fill: '#6b7280' }} />
-              <Tooltip 
-                contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px', color: '#fff' }}
-              />
-              <Legend wrapperStyle={{ paddingTop: '10px' }} />
-              <Bar dataKey="quizzes" fill="#0ea5e9" name="Quizzes Taken" radius={[8, 8, 0, 0]} />
-              <Bar dataKey="avgScore" fill="#10b981" name="Avg Score (%)" radius={[8, 8, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      )}
+      {/* Monthly & Performance */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {chartData.monthlyProgress.length > 0 && (
+          <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-soft border border-gray-100 dark:border-gray-800 p-6 w-full">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Monthly Highlights</h2>
+            <div className="h-72 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData.monthlyProgress}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" className="dark:stroke-gray-800" />
+                  <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 12}} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 12}} />
+                  <Tooltip
+                    cursor={{fill: '#f3f4f6', className: 'dark:fill-gray-800'}}
+                    contentStyle={{ backgroundColor: '#111827', borderRadius: '12px', border: 'none', color: '#fff' }}
+                  />
+                  <Legend iconType="circle" wrapperStyle={{ paddingTop: '15px' }} />
+                  <Bar dataKey="quizzes" name="Attempts" fill="#8b5cf6" radius={[4, 4, 0, 0]} barSize={20} />
+                  <Bar dataKey="avgScore" name="Avg Score (%)" fill="#10b981" radius={[4, 4, 0, 0]} barSize={20} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        )}
 
-      {/* Performance by Quiz - Smaller */}
-      {chartData.quizPerformanceData.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 md:p-6">
-          <h2 className="text-lg md:text-xl font-bold text-gray-900 dark:text-white mb-4">Performance by Quiz (Top 10)</h2>
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart 
-              data={chartData.quizPerformanceData}
-              layout="vertical"
-              margin={{ top: 5, right: 20, left: 80, bottom: 5 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-gray-700" />
-              <XAxis type="number" domain={[0, 100]} stroke="#6b7280" className="dark:stroke-gray-400" tick={{ fill: '#6b7280' }} />
-              <YAxis dataKey="name" type="category" width={70} stroke="#6b7280" className="dark:stroke-gray-400" tick={{ fill: '#6b7280', fontSize: 12 }} />
-              <Tooltip 
-                contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px', color: '#fff' }}
-                formatter={(value, name) => {
-                  if (name === 'avgScore') return [`${value}%`, 'Average Score'];
-                  if (name === 'bestScore') return [`${value}%`, 'Best Score'];
-                  return [value, name];
-                }}
-              />
-              <Legend wrapperStyle={{ paddingTop: '10px' }} />
-              <Bar dataKey="avgScore" fill="#0ea5e9" name="Average Score (%)" radius={[0, 8, 8, 0]} />
-              <Bar dataKey="bestScore" fill="#10b981" name="Best Score (%)" radius={[0, 8, 8, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      )}
+        {chartData.quizPerformanceData.length > 0 && (
+          <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-soft border border-gray-100 dark:border-gray-800 p-6 w-full overflow-hidden">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Top Categories</h2>
+            <div className="h-72 w-full -ml-4">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart 
+                  data={chartData.quizPerformanceData}
+                  layout="vertical"
+                  margin={{ top: 0, right: 30, left: 20, bottom: 0 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e5e7eb" className="dark:stroke-gray-800" />
+                  <XAxis type="number" domain={[0, 100]} axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 12}} />
+                  <YAxis dataKey="name" type="category" width={90} axisLine={false} tickLine={false} tick={{fill: '#6b7280', fontSize: 11}} />
+                  <Tooltip
+                    cursor={{fill: '#f3f4f6', className: 'dark:fill-gray-800'}}
+                    contentStyle={{ backgroundColor: '#111827', borderRadius: '12px', border: 'none', color: '#fff' }}
+                  />
+                  <Legend iconType="circle" wrapperStyle={{ paddingTop: '15px', paddingLeft: '20px' }} />
+                  <Bar dataKey="avgScore" name="Average %" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={12} />
+                  <Bar dataKey="bestScore" name="Best %" fill="#f59e0b" radius={[0, 4, 4, 0]} barSize={12} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

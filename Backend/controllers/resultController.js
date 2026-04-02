@@ -80,8 +80,9 @@ async function handleSubmitQuiz(req,res){
             await user.save();
          
          // Invalidate relevant caches
-         await invalidateCache('cache:/api/result*');
-         await invalidateCache('cache:/api/contests*'); // If contest result
+         await invalidateCache('cache:public:/api/result*');
+         await invalidateCache(`cache:user:${req.user._id}:/api/result*`);
+         await invalidateCache('cache:public:/api/contests*'); // If contest result
          
          
          return res.status(200).json({
@@ -171,7 +172,7 @@ async function leaderboard(req,res){
             topResults.map(async(result)=>{
                 const user = await User.findById(result.userId);
                 return{
-                    username: user.name,
+                    username: user?.name,
                     score: result.score,
                     total: result.total,
                     percentage: result.percentage,
@@ -396,8 +397,10 @@ async function handleDeleteResult(req, res) {
 
         await Result.findByIdAndDelete(resultId);
 
-        // Invalidate result caches
-        await invalidateCache('cache:/api/result*');
+        await invalidateCache('cache:public:/api/result*');
+        // Delete affects specific user, but we don't have user id here unless we fetch the result.
+        // It's an admin route so we might just invalidate generally using a wildcard
+        await invalidateCache('cache:user:*:/api/result*');
 
         return res.status(200).json({ message: "Result deleted successfully" });
     } catch (err) {

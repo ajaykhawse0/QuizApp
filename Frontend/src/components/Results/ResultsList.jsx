@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { resultAPI } from '../../services/api';
 import LoadingSpinner from '../Common/LoadingSpinner';
+import { ChevronRight, Clock, Target, Award, ListChecks, Calendar } from 'lucide-react';
 
 const ResultsList = () => {
   const [results, setResults] = useState([]);
@@ -29,8 +30,6 @@ const ResultsList = () => {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
     });
   };
 
@@ -41,80 +40,102 @@ const ResultsList = () => {
   };
 
   const getScoreColor = (percentage) => {
-    if (percentage >= 90) return 'text-green-600 dark:text-green-400';
-    if (percentage >= 70) return 'text-blue-600 dark:text-blue-400';
-    if (percentage >= 50) return 'text-yellow-600 dark:text-yellow-400';
-    return 'text-red-600 dark:text-red-400';
+    if (percentage >= 90) return 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30';
+    if (percentage >= 70) return 'text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/30';
+    if (percentage >= 50) return 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30';
+    return 'text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/30';
   };
 
   if (loading) {
-    return <LoadingSpinner />;
+    return (
+      <div className="flex justify-center items-center min-h-[50vh]">
+        <LoadingSpinner />
+      </div>
+    );
   }
 
   if (error) {
     return (
-      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded">
-        {error}
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 p-4 rounded-r-xl shadow-sm">
+          <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div>
-      <div className="mb-6 md:mb-8">
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2">My Results</h1>
-        <p className="text-gray-600 dark:text-gray-400 text-sm md:text-base">View your quiz attempts and performance</p>
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+      <div className="mb-8 md:mb-12 border-b border-gray-200 dark:border-gray-800 pb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white mb-2">My History</h1>
+          <p className="text-gray-500 dark:text-gray-400">Review your past quiz attempts and track your progress.</p>
+        </div>
       </div>
 
       {results.length === 0 ? (
-        <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg shadow">
-          <p className="text-gray-500 dark:text-gray-400 text-lg mb-4">No quiz results yet.</p>
+        <div className="text-center py-20 bg-gray-50/50 dark:bg-gray-900/50 rounded-3xl border border-gray-100 dark:border-gray-800">
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-indigo-50 dark:bg-indigo-900/20 text-indigo-500 dark:text-indigo-400 mb-6">
+            <ListChecks className="w-10 h-10" />
+          </div>
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No results yet</h3>
+          <p className="text-gray-500 dark:text-gray-400 mb-8 max-w-sm mx-auto">
+            You haven't taken any quizzes. Start exploring and test your knowledge!
+          </p>
           <Link
-            to="/"
-            className="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium"
+            to="/quizzes"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium shadow-sm transition-all"
           >
-            Take your first quiz →
+            Take a Quiz
+            <ChevronRight className="w-4 h-4" />
           </Link>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="grid gap-4 sm:gap-6">
           {results.map((result, index) => (
-            <div
+            <Link
               key={index}
-              className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 md:p-6 hover:shadow-lg transition-all"
+              to={result.id ? `/result/${result.id}` : '#'}
+              className={`group flex flex-col sm:flex-row sm:items-center bg-white dark:bg-gray-900 rounded-2xl p-5 sm:p-6 transition-all duration-300 border border-gray-100 dark:border-gray-800 ${result.id ? 'hover:border-primary-300 dark:hover:border-primary-700 hover:shadow-soft-xl cursor-pointer' : 'opacity-80'}`}
             >
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div className="flex-1">
-                  <h3 className="text-lg md:text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                    {result.quizTitle || 'Quiz'}
+              <div className="flex-1 min-w-0 mb-4 sm:mb-0">
+                <div className="flex items-center gap-3 mb-2">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+                    {result.quizTitle || 'Untitled Quiz'}
                   </h3>
-                  <div className="flex flex-wrap items-center gap-3 md:gap-6 text-xs md:text-sm text-gray-600 dark:text-gray-400">
-                    <span>
-                      Score: {result.score}/{result.total}
+                  {result.submittedAt && (
+                    <span className="hidden sm:inline-flex items-center text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">
+                      <Calendar className="w-3.5 h-3.5 mr-1" />
+                      {formatDate(result.submittedAt)}
                     </span>
-                    <span className={`font-semibold ${getScoreColor(result.percentage)}`}>
-                      {result.percentage.toFixed(1)}%
-                    </span>
-                    <span>Time: {formatTime(result.timeTaken)}</span>
-                    {result.submittedAt && (
-                      <span className="hidden sm:inline">{formatDate(result.submittedAt)}</span>
-                    )}
-                  </div>
-                </div>
-                <div className="sm:ml-4">
-                  {result.id ? (
-                    <Link
-                      to={`/result/${result.id}`}
-                      className="bg-primary-600 hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition block text-center sm:inline-block"
-                    >
-                      View Details
-                    </Link>
-                  ) : (
-                    <span className="text-gray-400 dark:text-gray-500 text-sm">No details available</span>
                   )}
                 </div>
+
+                <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
+                  <div className="flex items-center gap-1.5">
+                    <Target className="w-4 h-4 text-gray-400" />
+                    <span>Score: {result.score}/{result.total}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Clock className="w-4 h-4 text-gray-400" />
+                    <span>Time: {formatTime(result.timeTaken)}</span>
+                  </div>
+                </div>
               </div>
-            </div>
+
+              <div className="flex items-center justify-between sm:justify-end gap-6 sm:ml-6 pt-4 sm:pt-0 border-t sm:border-t-0 border-gray-100 dark:border-gray-800">
+                <div className="text-center sm:text-right">
+                  <span className={`inline-flex items-center justify-center px-3 py-1 rounded-lg text-sm font-bold ${getScoreColor(result.percentage)}`}>
+                    {result.percentage.toFixed(1)}%
+                  </span>
+                </div>
+                {result.id && (
+                  <div className="w-10 h-10 rounded-full bg-gray-50 dark:bg-gray-800 group-hover:bg-primary-50 dark:group-hover:bg-primary-900/30 flex items-center justify-center transition-colors">
+                    <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-400" />
+                  </div>
+                )}
+              </div>
+            </Link>
           ))}
         </div>
       )}

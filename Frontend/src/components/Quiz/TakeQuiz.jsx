@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { quizAPI, resultAPI } from '../../services/api';
+import { quizAPI, resultAPI, contestAPI } from '../../services/api';
 import LoadingSpinner from '../Common/LoadingSpinner';
-import { useRef } from 'react';
+import { AlertCircle, Clock, ShieldAlert, Maximize, AlertTriangle, ArrowRight, ArrowLeft, CheckCircle2 } from 'lucide-react';
 
 const TakeQuiz = () => {
   const { id } = useParams();
@@ -11,6 +11,7 @@ const TakeQuiz = () => {
   const searchParams = new URLSearchParams(location.search);
   const contestId = searchParams.get('contestId');
   const [quiz, setQuiz] = useState(null);
+  const [contest, setContest] = useState(null);
   const [answers, setAnswers] = useState([]);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [timeLeft, setTimeLeft] = useState(0);
@@ -42,11 +43,18 @@ const TakeQuiz = () => {
 
   useEffect(() => {
     if (quiz && quizStarted && !startTime) {
-      setTimeLeft(quiz.timeLimit);
+      if (contestId && contest?.endTime) {
+        const now = Date.now();
+        const end = new Date(contest.endTime).getTime();
+        const remainingSeconds = Math.max(0, Math.floor((end - now) / 1000));
+        setTimeLeft(remainingSeconds);
+      } else {
+        setTimeLeft(quiz.timeLimit);
+      }
       setStartTime(Date.now());
       setAnswers(new Array(quiz.questions.length).fill(null));
     }
-  }, [quiz, quizStarted, startTime]);
+  }, [quiz, contest, quizStarted, startTime, contestId]);
 
   useEffect(() => {
     if (timeLeft > 0 && startTime) {
@@ -68,62 +76,46 @@ const TakeQuiz = () => {
   useEffect(() => {
     if (!quiz || !startTime || !quizStarted) return;
 
-    // Function to handle beforeunload (refresh, close tab)
     const handleBeforeUnload = (e) => {
       if (isSubmittingRef.current) return;
-
       e.preventDefault();
       e.returnValue = 'Your quiz progress will be automatically submitted if you leave. Are you sure?';
-      
-      // Auto-submit quiz
       handleAutoSubmit();
-      
       return e.returnValue;
     };
 
-    // Function to handle popstate (back button)
     const handlePopState = (e) => {
       if (isSubmittingRef.current) return;
-
-      // Prevent navigation and show custom dialog
       window.history.pushState(null, '', window.location.pathname);
       setShowLeaveConfirm(true);
       pendingNavigationRef.current = true;
     };
 
-    // Anti-cheat: Handle tab switching or window blur
     const handleVisibilityChange = () => {
       if (document.hidden && !isSubmittingRef.current && quizStarted) {
         handleViolation("Tab switching or minimizing the window is not allowed.");
       }
     };
 
-    // Anti-cheat: Handle clicking outside the window
     const handleBlur = () => {
-      // Ignore blur if we are already submitting or the document still has focus
       if (!isSubmittingRef.current && quizStarted && !document.hasFocus()) {
         handleViolation("Clicking outside the quiz window or switching tabs is not allowed.");
       }
     };
 
-    // Anti-cheat: Handle exiting fullscreen
     const handleFullscreenChange = () => {
       if (!document.fullscreenElement && !isSubmittingRef.current && quizStarted) {
         handleViolation("Exiting full screen is not allowed during the quiz.");
       }
     };
 
-    // Push initial state to detect back button
     window.history.pushState(null, '', window.location.pathname);
-
-    // Add event listeners
     window.addEventListener('beforeunload', handleBeforeUnload);
     window.addEventListener('popstate', handlePopState);
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('blur', handleBlur);
     document.addEventListener('fullscreenchange', handleFullscreenChange);
 
-    // Cleanup
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       window.removeEventListener('popstate', handlePopState);
@@ -134,24 +126,20 @@ const TakeQuiz = () => {
   }, [quiz, startTime, answers, quizStarted]);
 
   const handleViolation = (message) => {
-    // Debounce to prevent multiple immediate triggers (e.g., blur + visibilitychange right after each other)
     const now = Date.now();
     if (now - lastViolationTimeRef.current < 2000) return;
     lastViolationTimeRef.current = now;
 
     const currentWarnings = warningsRef.current;
     
-    // Auto-submit on 3rd warning (which means they already had 2)
     if (currentWarnings >= 2) {
       alert("You have exceeded the maximum number of warnings (3). Your quiz is being automatically submitted.");
       handleAutoSubmit().then(() => {
-        // Fallback navigation if auto-submit doesn't redirect
         navigate('/results', { replace: true });
       });
       return;
     }
     
-    // Increment warnings
     warningsRef.current = currentWarnings + 1;
     setWarnings(warningsRef.current);
     setWarningMessage(`${message} Warning ${warningsRef.current} of 3.`);
@@ -166,7 +154,6 @@ const TakeQuiz = () => {
       setShowWarningModal(false);
     } catch (err) {
       console.error("Error attempting to enable fullscreen:", err);
-      // If we can't get fullscreen, they still need to close the modal
       setShowWarningModal(false);
     }
   };
@@ -186,9 +173,15 @@ const TakeQuiz = () => {
   const fetchQuiz = async () => {
     try {
       setLoading(true);
-      const response = await quizAPI.getById(id);
-      setQuiz(response.data.quiz);
-    }catch (error) {
+      const [quizResponse, contestResponse] = await Promise.all([
+        quizAPI.getById(id),
+        contestId ? contestAPI.getById(contestId) : Promise.resolve(null)
+      ]);
+      setQuiz(quizResponse.data.quiz);
+      if (contestResponse) {
+        setContest(contestResponse.data.contest);
+      }
+    } catch (error) {
       if (error.response?.status === 403) {
         const { message, daysRemaining, canRetakeAt } = error.response.data;
         setEligibilityData({ message, daysRemaining, canRetakeAt });
@@ -196,11 +189,11 @@ const TakeQuiz = () => {
       } else {
         console.error('Error fetching quiz:', error);
         setError('Failed to load quiz');
-      }}finally {
+      }
+    } finally {
       setLoading(false);
     }
   };
-
 
   const handleAnswerSelect = (answerIndex) => {
     const newAnswers = [...answers];
@@ -225,9 +218,7 @@ const TakeQuiz = () => {
 
     const unanswered = answers.filter((a) => a === null).length;
     if (unanswered > 0) {
-      const confirm = window.confirm(
-        `You have ${unanswered} unanswered questions. Submit anyway?`
-      );
+      const confirm = window.confirm(`You have ${unanswered} unanswered questions. Submit anyway?`);
       if (!confirm) return;
     }
 
@@ -255,16 +246,12 @@ const TakeQuiz = () => {
     }
   };
 
-  // Auto-submit function for page unload scenarios
   const handleAutoSubmit = async () => {
     if (isSubmittingRef.current) return;
-    
     isSubmittingRef.current = true;
 
     try {
       const timeTaken = Math.floor((Date.now() - startTime) / 1000);
-      
-      // Use sendBeacon for reliable submission during page unload
       const data = JSON.stringify({
         quizId: id,
         answers: answers,
@@ -275,14 +262,9 @@ const TakeQuiz = () => {
       const token = localStorage.getItem('token');
       const blob = new Blob([data], { type: 'application/json' });
       
-      // Try to use sendBeacon first (more reliable during unload)
-      const beaconSent = navigator.sendBeacon(
-        `${import.meta.env.VITE_API_BASE_URL}/result/submit`,
-        blob
-      );
+      const beaconSent = navigator.sendBeacon(`${import.meta.env.VITE_API_BASE_URL}/result/submit`, blob);
 
       if (!beaconSent) {
-        // Fallback to sync XHR if beacon fails
         const xhr = new XMLHttpRequest();
         xhr.open('POST', `${import.meta.env.VITE_API_BASE_URL}/result/submit`, false);
         xhr.setRequestHeader('Content-Type', 'application/json');
@@ -294,17 +276,14 @@ const TakeQuiz = () => {
     }
   };
 
-  // Handle confirm leave action
   const handleConfirmLeave = async () => {
     setShowLeaveConfirm(false);
     await handleAutoSubmit();
-    // Navigate back after submission
     setTimeout(() => {
       navigate(-1);
     }, 100);
   };
 
-  // Handle cancel leave action
   const handleCancelLeave = () => {
     setShowLeaveConfirm(false);
     pendingNavigationRef.current = false;
@@ -316,188 +295,114 @@ const TakeQuiz = () => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  if (loading) return <LoadingSpinner />;
+  if (loading) return <div className="min-h-[60vh] flex items-center justify-center"><LoadingSpinner /></div>;
 
-  // Show eligibility error dialog instead of generic error
   if (showEligibilityError && eligibilityData) {
     return (
-      <div className="max-w-4xl mx-auto px-4 md:px-0">
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full p-6 animate-in fade-in zoom-in duration-200">
-            {/* Icon */}
-            <div className="flex justify-center mb-4">
-              <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-                <svg
-                  className="w-8 h-8 text-red-600 dark:text-red-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 15v2m-6 0h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                  />
-                </svg>
-              </div>
-            </div>
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 flex justify-center items-center min-h-[80vh]">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-soft-xl max-w-md w-full p-8 text-center border border-gray-100 dark:border-gray-800 animate-in fade-in zoom-in duration-300">
+          <div className="w-16 h-16 rounded-2xl bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 flex items-center justify-center mx-auto mb-6">
+            <Clock className="w-8 h-8" />
+          </div>
+          <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Quiz Not Available Yet</h3>
+          <p className="text-gray-500 dark:text-gray-400 mb-6">{eligibilityData.message}</p>
+          <div className="bg-orange-50/50 dark:bg-orange-900/10 rounded-xl p-5 mb-8 text-left border border-orange-100 dark:border-orange-800/30">
+            {(() => {
+              const now = new Date();
+              const retakeDate = new Date(eligibilityData.canRetakeAt);
+              const diffMs = retakeDate - now;
+              const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+              const diffMinutes = Math.floor(diffMs / (1000 * 60));
+              const days = eligibilityData.daysRemaining;
 
-            {/* Content */}
-            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 text-center mb-2">
-              Quiz Not Available
-            </h3>
-            <p className="text-gray-600 dark:text-gray-400 text-center mb-6">
-              {eligibilityData.message}
-            </p>
-
-            {/* Eligibility Info */}
-            <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4 mb-6 border border-red-200 dark:border-red-800">
-              {(() => {
-                const now = new Date();
-                const retakeDate = new Date(eligibilityData.canRetakeAt);
-                const diffMs = retakeDate - now;
-                const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-                const diffMinutes = Math.floor(diffMs / (1000 * 60));
-                const days = eligibilityData.daysRemaining;
-
-                return (
-                  <>
-                    <div className="flex items-center justify-between text-sm mb-2">
-                      <span className="text-gray-600 dark:text-gray-400">Time Remaining:</span>
-                      <span className="font-bold text-red-600 dark:text-red-400 text-lg">
-                        {days >= 1 
-                          ? `${days} ${days === 1 ? 'day' : 'days'}`
-                          : diffHours >= 1
-                          ? `${diffHours} ${diffHours === 1 ? 'hour' : 'hours'}`
-                          : `${diffMinutes} ${diffMinutes === 1 ? 'minute' : 'minutes'}`
-                        }
+              return (
+                <div className="space-y-3 font-medium">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-gray-600 dark:text-gray-400">Time Remaining</span>
+                    <span className="text-orange-600 dark:text-orange-400 text-lg">
+                      {days >= 1 ? `${days} ${days === 1 ? 'day' : 'days'}` : diffHours >= 1 ? `${diffHours} ${diffHours === 1 ? 'hr' : 'hrs'}` : `${diffMinutes} ${diffMinutes === 1 ? 'min' : 'mins'}`}
+                    </span>
+                  </div>
+                  {eligibilityData.canRetakeAt && (
+                    <div className="flex justify-between items-center text-sm pt-3 border-t border-orange-200/50 dark:border-orange-800/50">
+                      <span className="text-gray-600 dark:text-gray-400">Available On</span>
+                      <span className="text-gray-900 dark:text-white">
+                        {new Date(eligibilityData.canRetakeAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
-                    {eligibilityData.canRetakeAt && (
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-600 dark:text-gray-400">Available After:</span>
-                        <span className="font-semibold text-gray-900 dark:text-gray-100">
-                          {new Date(eligibilityData.canRetakeAt).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </span>
-                      </div>
-                    )}
-                  </>
-                );
-              })()}
-            </div>
-
-            {/* Info Message */}
-            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 mb-6 border border-blue-200 dark:border-blue-800">
-              <div className="flex items-start gap-2">
-                <svg
-                  className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                <p className="text-sm text-blue-700 dark:text-blue-300">
-                  You can only retake each quiz once every 7 days to ensure fair practice and learning.
-                </p>
-              </div>
-            </div>
-
-            {/* Action */}
-            <button
-              onClick={() => {
-                setShowEligibilityError(false);
-                navigate('/quizzes');
-              }}
-              className="w-full px-4 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors duration-200 shadow-lg shadow-primary-600/30"
-            >
-              Browse Other Quizzes
-            </button>
+                  )}
+                </div>
+              );
+            })()}
           </div>
+          <button
+            onClick={() => { setShowEligibilityError(false); navigate('/quizzes'); }}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-50 hover:bg-primary-600 text-gray-900 hover:text-white dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-primary-600 rounded-xl font-semibold transition-all duration-300 shadow-sm"
+          >
+            Browse Other Quizzes
+          </button>
         </div>
       </div>
     );
   }
 
-  // Show custom error if quiz fetching failed
   if (error || !quiz) {
     return (
-      <div className="bg-red-50 dark:bg-red-900/20 border border-red-300 dark:border-red-700 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg shadow-sm">
-        {error || 'Quiz not found'}
+      <div className="max-w-3xl mx-auto px-4 py-12">
+        <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 p-4 rounded-r-lg">
+          <p className="text-sm text-red-700 dark:text-red-400">{error || 'Quiz not found'}</p>
+        </div>
       </div>
     );
   }
 
   const question = quiz.questions?.[currentQuestion];
-  if (!question) {
-    return (
-      <div className="text-center py-12 text-gray-600 dark:text-gray-400">
-        <p>Quiz questions not available</p>
-      </div>
-    );
-  }
+  if (!question) return null;
 
-  // Pre-quiz screen requiring fullscreen
   if (!quizStarted) {
     return (
-      <div className="max-w-4xl mx-auto px-4 md:px-0">
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 md:p-12 text-center animate-in fade-in zoom-in duration-300">
-          <div className="w-20 h-20 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
-            <svg
-              className="w-10 h-10 text-indigo-600 dark:text-indigo-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m0 0v2m0-2h4m-4 0H8m4-10a4 4 0 110 8 4 4 0 010-8zm-8 4h.01M20 11h.01M16 11h.01M8 11h.01" />
-            </svg>
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12 flex justify-center items-center min-h-[80vh]">
+        <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-soft-xl border border-gray-100 dark:border-gray-800 p-8 md:p-12 w-full animate-in fade-in zoom-in duration-300">
+          <div className="flex justify-center mb-8">
+            <div className="w-16 h-16 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-2xl flex items-center justify-center">
+              <ShieldAlert className="w-8 h-8" />
+            </div>
           </div>
-          <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-            Rules & Regulations
-          </h2>
-          <div className="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-6 mb-8 text-left border border-orange-200 dark:border-orange-800/50">
-            <h3 className="text-lg font-semibold text-orange-800 dark:text-orange-400 mb-3 flex items-center gap-2">
-               Strict Anti-Cheat constraints are applied!
-            </h3>
-            <ul className="space-y-3 text-orange-700 dark:text-orange-300">
-              <li className="flex items-start">
-                <svg className="w-5 h-5 mr-3 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-                </svg>
-                This quiz must be taken in Full Screen mode.
-              </li>
-              <li className="flex items-start">
-                <svg className="w-5 h-5 mr-3 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                Exiting Full Screen, switching tabs, minimizing, or split-screening will result in a warning.
-              </li>
-              <li className="flex items-start font-bold">
-                <svg className="w-5 h-5 mr-3 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-                Auto-Submit: After 3 warnings, the quiz will be submitted and ended automatically. No exceptions.
-              </li>
-            </ul>
+          <h2 className="text-3xl font-bold text-gray-900 dark:text-white text-center mb-4 tracking-tight">Rules & Regulations</h2>
+          <p className="text-center text-gray-500 dark:text-gray-400 mb-8 max-w-lg mx-auto">
+            This quiz is strictly monitored. Please read the following rules carefully before starting.
+          </p>
+
+          <div className="space-y-4 mb-10 text-gray-700 dark:text-gray-300 bg-gray-50/50 dark:bg-gray-800/50 p-6 rounded-2xl border border-gray-100 dark:border-gray-800">
+            <div className="flex gap-4">
+              <Maximize className="w-6 h-6 text-primary-500 flex-shrink-0" />
+              <div>
+                <p className="font-semibold text-gray-900 dark:text-white">Full Screen Required</p>
+                <p className="text-sm mt-1">You must remain in full screen for the entire duration of the quiz.</p>
+              </div>
+            </div>
+            <div className="flex gap-4">
+              <AlertTriangle className="w-6 h-6 text-orange-500 flex-shrink-0" />
+              <div>
+                <p className="font-semibold text-gray-900 dark:text-white">No Tab Switching</p>
+                <p className="text-sm mt-1">Switching tabs, minimizing the window, or exiting full screen will result in a warning.</p>
+              </div>
+            </div>
+            <div className="flex gap-4">
+              <CheckCircle2 className="w-6 h-6 text-red-500 flex-shrink-0" />
+              <div>
+                <p className="font-semibold text-red-600 dark:text-red-400">Auto-Submit</p>
+                <p className="text-sm mt-1">After 3 warnings, your quiz will be automatically submitted.</p>
+              </div>
+            </div>
           </div>
+
           <button
             onClick={startQuizFlow}
-            className="w-full sm:w-auto px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-all transform hover:scale-105 shadow-lg flex items-center justify-center gap-2"
+            className="w-full flex justify-center items-center gap-2 px-8 py-4 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-semibold transition-all duration-300 shadow-sm"
           >
-            <span>I Understand, Start Quiz in Fullscreen</span>
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
-            </svg>
+            I Understand, Start Quiz
+            <ArrowRight className="w-5 h-5" />
           </button>
         </div>
       </div>
@@ -507,94 +412,94 @@ const TakeQuiz = () => {
   const progress = ((currentQuestion + 1) / quiz.questions.length) * 100;
 
   return (
-    <div className="max-w-4xl mx-auto px-4 md:px-0">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 md:p-8 transition-colors duration-300">
-        {/* Header */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-              {quiz.title}
-            </h1>
-            <div className="text-right">
-              <div
-                className={`text-lg font-semibold ${
-                  timeLeft < 60 ? 'text-red-600 dark:text-red-400' : 'text-gray-700 dark:text-gray-200'
-                }`}
-              >
-                {formatTime(timeLeft)}
-              </div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">Time Remaining</div>
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 min-h-[85vh] flex flex-col">
+      <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-soft-xl border border-gray-100 dark:border-gray-800 flex-1 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+        
+        {/* Header Ribbon */}
+        <div className="p-6 md:p-8 border-b border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{quiz.title}</h1>
+            <div className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold font-mono text-xl shadow-inner ${timeLeft < 60 ? 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400' : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700'}`}>
+              <Clock className={`w-5 h-5 ${timeLeft < 60 ? 'animate-pulse' : ''}`} />
+              {formatTime(timeLeft)}
             </div>
           </div>
-
-          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+          <div className="flex items-center justify-between text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+            <span>Question {currentQuestion + 1} of {quiz.questions.length}</span>
+            <span>{Math.round(progress)}% Complete</span>
+          </div>
+          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
             <div
-              className="bg-primary-600 h-2 rounded-full transition-all duration-300"
+              className="bg-primary-600 h-full rounded-full transition-all duration-500 ease-out"
               style={{ width: `${progress}%` }}
             />
           </div>
-          <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            Question {currentQuestion + 1} of {quiz.questions.length}
-          </div>
         </div>
 
-        {/* Question */}
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
+        {/* Question Area */}
+        <div className="p-6 md:p-8 flex-1 flex flex-col">
+          <h2 className="text-xl md:text-2xl font-semibold text-gray-900 dark:text-gray-100 mb-8 leading-relaxed">
             {question.question}
           </h2>
 
-          <div className="space-y-3">
+          <div className="space-y-4 flex-1">
             {question.options.map((option, index) => (
-              <button
+              <label
                 key={index}
-                onClick={() => handleAnswerSelect(index)}
-                className={`w-full text-left p-4 rounded-lg border-2 transition ${
+                className={`relative flex items-center p-5 cursor-pointer rounded-xl border-2 transition-all duration-200 ${
                   answers[currentQuestion] === index
-                    ? 'border-primary-600 bg-primary-50 dark:bg-gray-600  '
-                    : 'border-gray-200 dark:border-gray-700 hover:border-primary-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 '
+                    ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 dark:border-primary-500'
+                    : 'border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-700 hover:bg-gray-50 dark:hover:bg-gray-800'
                 }`}
               >
-                <div className="flex items-center">
+                <div className="flex items-center h-5">
+                  <input
+                    type="radio"
+                    name={`question-${currentQuestion}`}
+                    className="sr-only"
+                    checked={answers[currentQuestion] === index}
+                    onChange={() => handleAnswerSelect(index)}
+                  />
                   <div
-                    className={`w-5 h-5 rounded-full border-2 mr-3 flex items-center justify-center ${
+                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
                       answers[currentQuestion] === index
                         ? 'border-primary-600 bg-primary-600'
-                        : 'border-gray-300 dark:border-gray-600'
+                        : 'border-gray-300 dark:border-gray-600 text-transparent'
                     }`}
                   >
-                    {answers[currentQuestion] === index && (
-                      <div className="w-2 h-2 rounded-full bg-white" />
-                    )}
+                    <div className="w-2.5 h-2.5 rounded-full bg-white transition-opacity" style={{ opacity: answers[currentQuestion] === index ? 1 : 0 }} />
                   </div>
-                  <span className="text-gray-900 dark:text-gray-100 ">{option}</span>
                 </div>
-              </button>
+                <div className="ml-4 text-gray-800 dark:text-gray-200 font-medium text-base">
+                  {option}
+                </div>
+              </label>
             ))}
           </div>
         </div>
 
-        {/* Navigation */}
-        <div className="flex items-center justify-between pt-6 border-t border-gray-200 dark:border-gray-700">
+        {/* Footer Navigation */}
+        <div className="p-6 md:p-8 border-t border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 flex flex-col-reverse sm:flex-row items-center justify-between gap-4">
           <button
             onClick={handlePrevious}
             disabled={currentQuestion === 0}
-            className="px-6 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+            className="w-full sm:w-auto flex justify-center items-center gap-2 px-6 py-3 border border-gray-300 dark:border-gray-600 rounded-xl text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
           >
+            <ArrowLeft className="w-4 h-4" />
             Previous
           </button>
 
-          <div className="hidden sm:flex space-x-2 overflow-x-auto scrollbar-hide  ">
+          <div className="flex items-center justify-center w-full sm:w-auto gap-2 overflow-x-auto px-2">
             {quiz.questions.map((_, index) => (
               <button
                 key={index}
                 onClick={() => setCurrentQuestion(index)}
-                className={`w-10 h-10 rounded-lg text-sm font-medium transition ${
+                className={`flex-shrink-0 w-10 h-10 rounded-lg text-sm font-semibold transition-all ${
                   index === currentQuestion
-                    ? 'bg-primary-600 text-white'
+                    ? 'bg-primary-600 text-white shadow-md'
                     : answers[index] !== null
-                    ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                    : 'bg-white border border-gray-200 text-gray-500 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
                 }`}
               >
                 {index + 1}
@@ -606,79 +511,54 @@ const TakeQuiz = () => {
             <button
               onClick={handleSubmit}
               disabled={submitting}
-              className="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium disabled:opacity-50 transition"
+              className="w-full sm:w-auto flex justify-center items-center gap-2 px-8 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-semibold disabled:opacity-50 transition-all shadow-sm"
             >
               {submitting ? 'Submitting...' : 'Submit Quiz'}
+              <CheckCircle2 className="w-5 h-5 ml-1" />
             </button>
           ) : (
             <button
               onClick={handleNext}
-              className="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition"
+              className="w-full sm:w-auto flex justify-center items-center gap-2 px-6 py-3 bg-gray-900 hover:bg-black dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900 rounded-xl font-semibold transition-all shadow-sm"
             >
               Next
+              <ArrowRight className="w-4 h-4" />
             </button>
           )}
         </div>
       </div>
 
-      {/* Custom Leave Confirmation Dialog */}
+      {/* Leave Confirmation Dialog */}
       {showLeaveConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full p-6 animate-in fade-in zoom-in duration-200">
-            {/* Icon */}
-            <div className="flex justify-center mb-4">
-              <div className="w-16 h-16 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
-                <svg
-                  className="w-8 h-8 text-orange-600 dark:text-orange-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                  />
-                </svg>
-              </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 dark:bg-black/80 backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-soft-xl max-w-md w-full p-8 border border-gray-100 dark:border-gray-800 animate-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center mx-auto mb-6 text-orange-600 dark:text-orange-400">
+              <AlertTriangle className="w-8 h-8" />
             </div>
-
-            {/* Content */}
-            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 text-center mb-2">
-              Leave Quiz?
-            </h3>
-            <p className="text-gray-600 dark:text-gray-400 text-center mb-6">
+            <h3 className="text-2xl font-bold text-gray-900 dark:text-white text-center mb-3">Leave Quiz?</h3>
+            <p className="text-gray-500 dark:text-gray-400 text-center mb-6">
               If you go back, your quiz will be automatically submitted with your current answers. This action cannot be undone.
             </p>
-
-            {/* Progress Info */}
-            <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 mb-6">
-              <div className="flex justify-between text-sm mb-2">
-                <span className="text-gray-600 dark:text-gray-400">Answered Questions:</span>
-                <span className="font-semibold text-gray-900 dark:text-gray-100">
-                  {answers.filter((a) => a !== null).length} / {quiz.questions.length}
-                </span>
+            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-5 mb-8 border border-gray-100 dark:border-gray-700">
+              <div className="flex justify-between text-sm mb-3">
+                <span className="text-gray-500 dark:text-gray-400">Answers Saved</span>
+                <span className="font-semibold text-gray-900 dark:text-white">{answers.filter((a) => a !== null).length} / {quiz.questions.length}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600 dark:text-gray-400">Time Remaining:</span>
-                <span className="font-semibold text-gray-900 dark:text-gray-100">
-                  {formatTime(timeLeft)}
-                </span>
+                <span className="text-gray-500 dark:text-gray-400">Time Remaining</span>
+                <span className="font-semibold text-gray-900 dark:text-white">{formatTime(timeLeft)}</span>
               </div>
             </div>
-
-            {/* Actions */}
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-3">
               <button
                 onClick={handleCancelLeave}
-                className="flex-1 px-4 py-3 border-2 border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-200 font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200"
+                className="flex-1 px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-700 dark:text-gray-200 font-semibold hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
               >
                 Stay & Continue
               </button>
               <button
                 onClick={handleConfirmLeave}
-                className="flex-1 px-4 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition-colors duration-200 shadow-lg shadow-orange-600/30"
+                className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold transition-colors shadow-sm"
               >
                 Submit & Leave
               </button>
@@ -689,148 +569,33 @@ const TakeQuiz = () => {
 
       {/* Warning Modal */}
       {showWarningModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-red-900/40 backdrop-blur-md">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-8 max-w-md w-full border-t-4 border-red-500 animate-in fade-in zoom-in duration-300">
-            <div className="flex justify-center mb-6">
-              <div className="w-20 h-20 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-                <svg className="w-10 h-10 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-              </div>
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-red-900/50 backdrop-blur-md">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl p-8 max-w-sm w-full border-t-4 border-red-500 animate-in zoom-in-95 duration-200">
+            <div className="mx-auto w-20 h-20 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center mb-6 text-red-600 dark:text-red-400">
+              <ShieldAlert className="w-10 h-10" />
             </div>
-            <h3 className="text-2xl font-bold text-center text-gray-900 dark:text-white mb-4">
-              Violation Detected
-            </h3>
-            <p className="text-gray-600 dark:text-gray-300 text-center mb-8 font-medium">
-              {warningMessage}
-            </p>
-            <div className="mb-8">
-              <div className="flex justify-between text-sm mb-2 font-semibold">
-                <span className="text-gray-600 dark:text-gray-400">Warnings</span>
+            <h3 className="text-2xl font-bold text-center text-gray-900 dark:text-white mb-2">Notice</h3>
+            <p className="text-gray-600 dark:text-gray-300 text-center mb-8 font-medium">{warningMessage}</p>
+            
+            <div className="mb-8 p-4 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700/50">
+              <div className="flex justify-between text-sm mb-2 font-bold uppercase tracking-wider">
+                <span className="text-gray-500 dark:text-gray-400">Warnings</span>
                 <span className="text-red-600 dark:text-red-400">{warnings} / 3</span>
               </div>
-              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 overflow-hidden">
                 <div 
-                  className="bg-red-500 h-3 rounded-full transition-all duration-500" 
+                  className="bg-red-500 h-full rounded-full transition-all duration-500 ease-out" 
                   style={{ width: `${(warnings / 3) * 100}%` }}
-                ></div>
+                />
               </div>
             </div>
+
             <button
               onClick={resumeFullscreenAndQuiz}
-              className="w-full px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold transition-all shadow-md flex items-center justify-center gap-2"
+              className="w-full px-6 py-4 bg-gray-900 hover:bg-black dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900 rounded-xl font-bold transition-all shadow-lg flex items-center justify-center gap-2"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-              </svg>
+              <Maximize className="w-5 h-5" />
               Return to Fullscreen
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Quiz Eligibility Error Dialog */}
-      {showEligibilityError && eligibilityData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full p-6 animate-in fade-in zoom-in duration-200">
-            {/* Icon */}
-            <div className="flex justify-center mb-4">
-              <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-                <svg
-                  className="w-8 h-8 text-red-600 dark:text-red-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 15v2m-6 0h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                  />
-                </svg>
-              </div>
-            </div>
-
-            {/* Content */}
-            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 text-center mb-2">
-              Quiz Not Available
-            </h3>
-            <p className="text-gray-600 dark:text-gray-400 text-center mb-6">
-              {eligibilityData.message}
-            </p>
-
-            {/* Eligibility Info */}
-            <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4 mb-6 border border-red-200 dark:border-red-800">
-              {(() => {
-                const now = new Date();
-                const retakeDate = new Date(eligibilityData.canRetakeAt);
-                const diffMs = retakeDate - now;
-                const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-                const diffMinutes = Math.floor(diffMs / (1000 * 60));
-                const days = eligibilityData.daysRemaining;
-
-                return (
-                  <>
-                    <div className="flex items-center justify-between text-sm mb-2">
-                      <span className="text-gray-600 dark:text-gray-400">Time Remaining:</span>
-                      <span className="font-bold text-red-600 dark:text-red-400 text-lg">
-                        {days >= 1 
-                          ? `${days} ${days === 1 ? 'day' : 'days'}`
-                          : diffHours >= 1
-                          ? `${diffHours} ${diffHours === 1 ? 'hour' : 'hours'}`
-                          : `${diffMinutes} ${diffMinutes === 1 ? 'minute' : 'minutes'}`
-                        }
-                      </span>
-                    </div>
-                    {eligibilityData.canRetakeAt && (
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-600 dark:text-gray-400">Available After:</span>
-                        <span className="font-semibold text-gray-900 dark:text-gray-100">
-                          {new Date(eligibilityData.canRetakeAt).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </span>
-                      </div>
-                    )}
-                  </>
-                );
-              })()}
-            </div>
-
-            {/* Info Message */}
-            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 mb-6 border border-blue-200 dark:border-blue-800">
-              <div className="flex items-start gap-2">
-                <svg
-                  className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                <p className="text-sm text-blue-700 dark:text-blue-300">
-                  You can only retake each quiz once every 7 days to ensure fair practice and learning.
-                </p>
-              </div>
-            </div>
-
-            {/* Action */}
-            <button
-              onClick={() => {
-                setShowEligibilityError(false);
-                navigate('/quizzes');
-              }}
-              className="w-full px-4 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors duration-200 shadow-lg shadow-primary-600/30"
-            >
-              Browse Other Quizzes
             </button>
           </div>
         </div>

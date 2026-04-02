@@ -12,9 +12,9 @@ async function handleCreateCategory(req, res) {
             const category = new Category({name,description});
             await category.save();
             
-            // Invalidate category and quiz caches
-            await invalidateCache('cache:/api/category*');
-            await invalidateCache('cache:/api/quiz*');
+            //Invalidate cache
+            await invalidateCache('cache:public:/api/categories*');
+            await invalidateCache('cache:public:/api/quiz*');
             
             return res.status(201).json({message:"Category created successfully",category});
         }

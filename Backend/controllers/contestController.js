@@ -45,7 +45,7 @@ async function handleCreateContest(req, res) {
     await contest.save();
 
     // Invalidate contest caches
-    await invalidateCache('cache:/api/contests*');
+    await invalidateCache('cache:public:/api/contests*');
 
     return res.status(201).json({
       message: "Contest created successfully",
@@ -133,11 +133,18 @@ async function handleGetContestById(req, res) {
       return res.status(404).json({ message: "Contest not found" });
     }
 
-    // Update status
+    // Update status locally without saving the populated document to avoid CastErrors
+    const originalStatus = contest.status;
     contest.updateStatus();
-    await contest.save();
+    
+    // Only save if status actually changed, and we must do it via updateOne so we don't save the populated fields
+    if (originalStatus !== contest.status) {
+      await Contest.updateOne({ _id: id }, { $set: { status: contest.status } });
+    }
 
-    const hasJoined = contest.hasUserJoined(userId);
+    const hasJoined = contest.participants.some(
+      (p) => p.user._id.toString() === userId.toString()
+    );
     const userParticipant = contest.participants.find(
       (p) => p.user._id.toString() === userId.toString()
     );
@@ -204,7 +211,7 @@ async function handleJoinContest(req, res) {
     await contest.save();
 
     // Invalidate contest caches (list, specific contest, leaderboard, my-contests)
-    await invalidateCache('cache:/api/contests*');
+    await invalidateCache('cache:public:/api/contests*');
 
     return res.status(200).json({
       message: "Successfully joined contest",
@@ -316,13 +323,6 @@ async function handleUpdateContest(req, res) {
       return res.status(404).json({ message: "Contest not found" });
     }
 
-    
-    if (contest.status !== "upcoming") {
-      return res.status(400).json({
-        message: "Cannot update contest that has already started",
-      });
-    }
-
     if (title) contest.title = title;
     if (description !== undefined) contest.description = description;
     if (startTime) contest.startTime = new Date(startTime);
@@ -334,7 +334,7 @@ async function handleUpdateContest(req, res) {
     await contest.save();
 
     // Invalidate contest caches
-    await invalidateCache('cache:/api/contests*');
+    await invalidateCache('cache:public:/api/contests*');
 
     return res.status(200).json({
       message: "Contest updated successfully",
@@ -357,7 +357,7 @@ async function handleDeleteContest(req, res) {
     }
 
     // Invalidate contest caches
-    await invalidateCache('cache:/api/contests*');
+    await invalidateCache('cache:public:/api/contests*');
 
     return res.status(200).json({ message: "Contest deleted successfully" });
   } catch (err) {

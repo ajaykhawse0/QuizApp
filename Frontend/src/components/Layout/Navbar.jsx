@@ -1,12 +1,14 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useTheme } from "../../context/ThemeContext";
+import { Sun, Moon, Menu, X, User as UserIcon } from "lucide-react";
 
 const Navbar = () => {
   const { user, logout, isAdmin } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -27,50 +29,64 @@ const Navbar = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const isActive = (path) => location.pathname === path;
+
   // Helper styles
-  const linkStyle =
-    "block md:inline-flex items-center px-3 py-2 text-sm font-medium text-gray-900 dark:text-gray-100 hover:text-primary-600 dark:hover:text-primary-400 transition";
+  const getLinkStyle = (path) => {
+    const active = isActive(path);
+    return `px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+      active
+        ? "bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300"
+        : "text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-50 dark:hover:bg-gray-800/50"
+    }`;
+  };
+
+  const getMobileLinkStyle = (path) => {
+    const active = isActive(path);
+    return `block w-full text-left px-4 py-3 text-sm font-medium transition-colors ${
+      active
+        ? "bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300 border-l-4 border-primary-500"
+        : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 border-l-4 border-transparent"
+    }`;
+  };
 
   return (
-    <nav className="bg-white dark:bg-gray-900 shadow-lg transition-colors duration-200 sticky top-0 z-50">
+    <nav className="bg-white/80 dark:bg-gray-950/80 backdrop-blur-md sticky top-0 z-50 border-b border-gray-100 dark:border-gray-800 transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Left Section */}
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-6">
             <Link
               to="/"
-              className="text-xl md:text-2xl font-bold text-primary-600 dark:text-primary-400"
+              className="text-2xl font-extrabold tracking-tight text-gray-900 dark:text-white flex items-center gap-2"
             >
+              <div className="w-8 h-8 rounded-lg bg-primary-600 flex items-center justify-center text-white">
+                <span className="text-xl font-bold leading-none -mt-px">Q</span>
+              </div>
               Quizify
             </Link>
 
             {/* Desktop Nav Links */}
-            <div className="hidden md:flex md:space-x-4">
-              <Link to="/" className={linkStyle}>
+            <div className="hidden md:flex items-center space-x-1">
+              <Link to="/" className={getLinkStyle("/")}>
                 Quizzes
               </Link>
               {user && (
                 <>
-                  <Link to="/contests" className={linkStyle}>
+                  <Link to="/contests" className={getLinkStyle("/contests")}>
                     Contests
                   </Link>
-                  <Link to="/my-contests" className={linkStyle}>
-                    My Contests
+                  <Link to="/results" className={getLinkStyle("/results")}>
+                    Results
                   </Link>
-                  <Link to="/results" className={linkStyle}>
-                    My Results
-                  </Link>
-                  <Link to="/statistics" className={linkStyle}>
-                    Statistics
-                  </Link>
-                  <Link to="/progress" className={linkStyle}>
-                    Progress
-                  </Link>
-                  <Link to="/leaderboard" className={linkStyle}>
+                  <Link to="/leaderboard" className={getLinkStyle("/leaderboard")}>
                     Leaderboard
                   </Link>
+                  <Link to="/statistics" className={getLinkStyle("/statistics")}>
+                    Stats
+                  </Link>
                   {isAdmin && (
-                    <Link to="/admin" className={linkStyle}>
+                    <Link to="/admin" className={getLinkStyle("/admin")}>
                       Admin
                     </Link>
                   )}
@@ -80,150 +96,86 @@ const Navbar = () => {
           </div>
 
           {/* Right Section */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-4">
             {/* Theme Toggle */}
             <button
               onClick={toggleTheme}
-              className="p-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+              className="p-2 rounded-full text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
               aria-label="Toggle dark mode"
             >
-              {theme === "dark" ? (
-                // Sun icon
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
-                  />
-                </svg>
-              ) : (
-                // Moon icon
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
-                  />
-                </svg>
-              )}
+              {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
             </button>
 
             {/* Auth Buttons / Profile */}
             {user ? (
               <>
-                {/* Mobile Menu Button */}
-                <button
-                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                  className="md:hidden p-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
-                >
-                  {mobileMenuOpen ? (
-                    <svg
-                      className="w-6 h-6"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
-                  ) : (
-                    <svg
-                      className="w-6 h-6"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M4 6h16M4 12h16M4 18h16"
-                      />
-                    </svg>
-                  )}
-                </button>
-
                 {/* Profile Dropdown */}
-                <div ref={dropdownRef} className="relative">
+                <div ref={dropdownRef} className="relative hidden md:block">
                   <button
                     onClick={() => setDropdownOpen((prev) => !prev)}
-                    className="focus:outline-none"
+                    className="flex items-center focus:outline-none"
                   >
                     <img
-                      src={user?.profilePicture || "/avatars/avatar3.png"}
+                      src={user?.profilePicture || "https://ui-avatars.com/api/?name=" + user.name + "&background=6366f1&color=fff"}
                       alt="Profile"
-                      className="w-10 h-10 rounded-full object-cover border-2 border-primary-500 hover:scale-105 transition mt-2"
+                      className="w-9 h-9 rounded-full object-cover ring-2 ring-transparent hover:ring-primary-500/50 transition-all duration-200"
                     />
                   </button>
 
                   {dropdownOpen && (
-                    <div className="absolute right-0 mt-3 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg py-2 z-50">
-                      <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
-                        <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+                    <div className="absolute right-0 mt-3 w-56 bg-white dark:bg-gray-900 rounded-2xl shadow-soft-lg border border-gray-100 dark:border-gray-800 py-2 z-50 transform origin-top-right transition-all">
+                      <div className="px-5 py-3 border-b border-gray-100 dark:border-gray-800 mb-1">
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
                           {user.name}
                         </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
                           {user.email}
                         </p>
                       </div>
                       <Link
                         to="/profile"
                         onClick={() => setDropdownOpen(false)}
-                        className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        className="block px-5 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
                       >
-                        Profile
+                        Profile & Settings
                       </Link>
-                      <Link
-                        to="/settings"
-                        onClick={() => setDropdownOpen(false)}
-                        className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                      >
-                        Settings
-                      </Link>
+                      <div className="h-px bg-gray-100 dark:bg-gray-800 my-1"></div>
                       <button
                         onClick={() => {
                           setDropdownOpen(false);
                           handleLogout();
                         }}
-                        className="block w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30"
+                        className="block w-full text-left px-5 py-2.5 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                       >
-                        Logout
+                        Sign out
                       </button>
                     </div>
                   )}
                 </div>
+
+                {/* Mobile Menu Button */}
+                <button
+                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                  className="md:hidden p-2 -mr-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-lg transition-colors"
+                >
+                  {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+                </button>
               </>
             ) : (
-              <>
+              <div className="flex items-center gap-3">
                 <Link
                   to="/login"
-                  className="text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 px-3 py-2 rounded-md text-sm font-medium transition"
+                  className="hidden sm:inline-block text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-4 py-2 rounded-full text-sm font-medium transition-colors"
                 >
-                  Login
+                  Log in
                 </Link>
                 <Link
                   to="/signup"
-                  className="bg-primary-600 hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-600 text-white px-3 md:px-4 py-2 rounded-lg text-sm font-medium transition"
+                  className="bg-primary-600 hover:bg-primary-700 text-white px-5 py-2 rounded-full text-sm font-medium transition-all shadow-sm shadow-primary-500/20 hover:shadow-primary-500/40"
                 >
-                  Sign Up
+                  Sign up
                 </Link>
-              </>
+              </div>
             )}
           </div>
         </div>
@@ -231,11 +183,11 @@ const Navbar = () => {
 
       {/* Mobile Dropdown Menu */}
       {mobileMenuOpen && (
-        <div className="md:hidden bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 py-3">
+        <div className="md:hidden bg-white dark:bg-gray-950 border-t border-gray-100 dark:border-gray-800 py-2 shadow-xl">
           <Link
             to="/"
             onClick={() => setMobileMenuOpen(false)}
-            className={linkStyle}
+            className={getMobileLinkStyle("/")}
           >
             Quizzes
           </Link>
@@ -244,42 +196,28 @@ const Navbar = () => {
               <Link
                 to="/contests"
                 onClick={() => setMobileMenuOpen(false)}
-                className={linkStyle}
+                className={getMobileLinkStyle("/contests")}
               >
                 Contests
               </Link>
               <Link
-                to="/my-contests"
-                onClick={() => setMobileMenuOpen(false)}
-                className={linkStyle}
-              >
-                My Contests
-              </Link>
-              <Link
                 to="/results"
                 onClick={() => setMobileMenuOpen(false)}
-                className={linkStyle}
+                className={getMobileLinkStyle("/results")}
               >
-                My Results
+                Results
               </Link>
               <Link
                 to="/statistics"
                 onClick={() => setMobileMenuOpen(false)}
-                className={linkStyle}
+                className={getMobileLinkStyle("/statistics")}
               >
                 Statistics
               </Link>
               <Link
-                to="/progress"
-                onClick={() => setMobileMenuOpen(false)}
-                className={linkStyle}
-              >
-                Progress
-              </Link>
-              <Link
                 to="/leaderboard"
                 onClick={() => setMobileMenuOpen(false)}
-                className={linkStyle}
+                className={getMobileLinkStyle("/leaderboard")}
               >
                 Leaderboard
               </Link>
@@ -287,35 +225,37 @@ const Navbar = () => {
                 <Link
                   to="/admin"
                   onClick={() => setMobileMenuOpen(false)}
-                  className={linkStyle}
+                  className={getMobileLinkStyle("/admin")}
                 >
-                  Admin
+                  Admin Dashboard
                 </Link>
               )}
-              <button
-                onClick={handleLogout}
-                className="block w-full text-left px-3 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30"
+              <div className="h-px bg-gray-100 dark:bg-gray-800 my-2"></div>
+              <Link
+                to="/profile"
+                onClick={() => setMobileMenuOpen(false)}
+                className={getMobileLinkStyle("/profile")}
               >
-                Logout
+                Profile & Settings
+              </Link>
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  handleLogout();
+                }}
+                className="block w-full text-left px-4 py-3 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+              >
+                Sign out
               </button>
             </>
           ) : (
-            <>
-              <Link
-                to="/login"
-                onClick={() => setMobileMenuOpen(false)}
-                className={linkStyle}
-              >
-                Login
-              </Link>
-              <Link
-                to="/signup"
-                onClick={() => setMobileMenuOpen(false)}
-                className={linkStyle}
-              >
-                Sign Up
-              </Link>
-            </>
+            <Link
+              to="/login"
+              onClick={() => setMobileMenuOpen(false)}
+              className={getMobileLinkStyle("/login")}
+            >
+              Log in
+            </Link>
           )}
         </div>
       )}
