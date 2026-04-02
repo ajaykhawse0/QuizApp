@@ -11,6 +11,11 @@ const resultSchema = new mongoose.Schema(
       ref: "Quiz",
       required: true,
     },
+    quizTitle: {
+      type: String,
+      trim: true,
+      default: null,
+    },
     contestId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Contest",

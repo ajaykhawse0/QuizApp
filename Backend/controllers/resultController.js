@@ -41,6 +41,7 @@ async function handleSubmitQuiz(req,res){
          const result = new Result({
             userId,
             quizId,
+                quizTitle: quiz.title,
             contestId: contestId || null,
             score,
             total,
@@ -115,9 +116,10 @@ async function handleGetResultsByUser(req,res){
         
         if(highest){
             const topResult = results[0];
+            const topQuiz = await Quiz.findById(topResult.quizId).select('title');
             return res.status(200).json({
                 result:{
-                    quizTitle: (await Quiz.findById(topResult.quizId)).title,
+                    quizTitle: topQuiz?.title || topResult.quizTitle || 'Untitled Quiz',
                     score: topResult.score,
                     total: topResult.total,
                     percentage: topResult.percentage,
@@ -139,7 +141,7 @@ const quizMap = Object.fromEntries(quizzes.map(q => [q._id.toString(), q.title])
 // Then map without async
 const resultList = results.map(result => ({
     id: result._id,
-    quizTitle: quizMap[result.quizId.toString()],
+    quizTitle: quizMap[result.quizId.toString()] || result.quizTitle || 'Untitled Quiz',
     score: result.score,
     total: result.total,
     percentage: result.percentage,
