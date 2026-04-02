@@ -16,6 +16,13 @@ import {
   Award
 } from "lucide-react";
 
+const toIsoFromLocalDateTime = (value) => {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toISOString();
+};
+
 const CreateContest = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -96,8 +103,8 @@ const CreateContest = () => {
         title: formData.title,
         description: formData.description,
         quizId: formData.quizId,
-        startTime: formData.startTime,
-        endTime: formData.endTime,
+        startTime: toIsoFromLocalDateTime(formData.startTime),
+        endTime: toIsoFromLocalDateTime(formData.endTime),
       };
 
       if (formData.maxParticipants) {

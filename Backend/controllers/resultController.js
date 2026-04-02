@@ -108,14 +108,18 @@ async function handleSubmitQuiz(req,res){
 async function handleGetResultsByUser(req,res){
     const userId = req.user._id;
     const highest = req.query.highest === 'true';
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const limit = Math.max(parseInt(req.query.limit, 10) || 10, 1);
+    const skip = (page - 1) * limit;
    
     
     try{
-        const results = await Result.find({userId});
-        results.sort((a,b) => b.score - a.score);
-        
         if(highest){
-            const topResult = results[0];
+            const topResult = await Result.findOne({ userId }).sort({ score: -1, timeTaken: 1, submittedAt: -1 });
+            if (!topResult) {
+                return res.status(200).json({ result: null });
+            }
+
             const topQuiz = await Quiz.findById(topResult.quizId).select('title');
             return res.status(200).json({
                 result:{
@@ -128,30 +132,37 @@ async function handleGetResultsByUser(req,res){
                 }
             });
         }
-        
-        
 
+        const [pagedResults, totalResults] = await Promise.all([
+            Result.find({ userId }).sort({ submittedAt: -1 }).skip(skip).limit(limit),
+            Result.countDocuments({ userId }),
+        ]);
 
-    // Get all unique quiz IDs
-const quizIds = results.map(r => r.quizId);
-// Fetch all quizzes at once
-const quizzes = await Quiz.find({_id: {$in: quizIds}});
-const quizMap = Object.fromEntries(quizzes.map(q => [q._id.toString(), q.title]));
+        const quizIds = [...new Set(pagedResults.map(r => r.quizId?.toString()).filter(Boolean))];
+        const quizzes = await Quiz.find({ _id: { $in: quizIds } }).select('title');
+        const quizMap = Object.fromEntries(quizzes.map(q => [q._id.toString(), q.title]));
 
-// Then map without async
-const resultList = results.map(result => ({
-    id: result._id,
-    quizTitle: quizMap[result.quizId.toString()] || result.quizTitle || 'Untitled Quiz',
-    score: result.score,
-    total: result.total,
-    percentage: result.percentage,
-    timeTaken: result.timeTaken,
-    submittedAt: result.submittedAt,
-}));
+        const resultList = pagedResults.map(result => ({
+            id: result._id,
+            quizTitle: quizMap[result.quizId?.toString()] || result.quizTitle || 'Untitled Quiz',
+            score: result.score,
+            total: result.total,
+            percentage: result.percentage,
+            timeTaken: result.timeTaken,
+            submittedAt: result.submittedAt,
+        }));
 
-
-
-        return res.status(200).json({resultList});
+        return res.status(200).json({
+            resultList,
+            pagination: {
+                page,
+                limit,
+                totalResults,
+                totalPages: Math.ceil(totalResults / limit),
+                hasNextPage: page * limit < totalResults,
+                hasPrevPage: page > 1,
+            },
+        });
     }
     catch(err){
         console.error("Error fetching results:", err);

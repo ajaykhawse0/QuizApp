@@ -32,7 +32,7 @@ const ProgressTracking = () => {
   const fetchProgressData = async () => {
     try {
       setLoading(true);
-      const response = await resultAPI.getUserResults();
+      const response = await resultAPI.getUserResults({ page: 1, limit: 200 });
       setResults(response.data.resultList || []);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load progress data');

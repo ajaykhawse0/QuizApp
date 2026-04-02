@@ -77,7 +77,7 @@ export const quizAPI = {
 // Result API
 export const resultAPI = {
   submit: (data) => api.post('/result/submit', data),
-  getUserResults: () => api.get('/result/user'),
+  getUserResults: (params) => api.get('/result/user', { params }),
   getUserStatistics: () => api.get('/result/user/statistics'),
   getById: (id) => api.get(`/result/${id}`),
   getByQuiz: (quizId, params) => api.get(`/result/quiz/${quizId}`, { params }),

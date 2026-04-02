@@ -16,6 +16,21 @@ import {
   Award
 } from "lucide-react";
 
+const formatLocalDateTime = (value) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  const pad = (n) => (n < 10 ? `0${n}` : `${n}`);
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+};
+
+const toIsoFromLocalDateTime = (value) => {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toISOString();
+};
+
 const UpdateContest = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -59,8 +74,8 @@ const UpdateContest = () => {
         title: contest.title || "",
         description: contest.description || "",
         quizId: contest.quiz?._id || contest.quiz || "",
-        startTime: contest.startTime ? new Date(contest.startTime) : "",
-        endTime: contest.endTime ? new Date(contest.endTime) : "",
+        startTime: contest.startTime ? formatLocalDateTime(contest.startTime) : "",
+        endTime: contest.endTime ? formatLocalDateTime(contest.endTime) : "",
         maxParticipants: contest.maxParticipants || "",
         prizeFirst: contest.prizeInfo?.first || "",
         prizeSecond: contest.prizeInfo?.second || "",
@@ -147,6 +162,14 @@ const UpdateContest = () => {
       ["title", "description", "startTime", "endTime", "isPublished"].forEach(field => {
         if (changedFields[field] !== undefined) updateData[field] = changedFields[field];
       });
+
+      if (updateData.startTime) {
+        updateData.startTime = toIsoFromLocalDateTime(updateData.startTime);
+      }
+
+      if (updateData.endTime) {
+        updateData.endTime = toIsoFromLocalDateTime(updateData.endTime);
+      }
 
       if (changedFields.maxParticipants !== undefined) {
         updateData.maxParticipants = formData.maxParticipants ? parseInt(formData.maxParticipants) : null;

@@ -61,7 +61,7 @@ const TakeQuiz = () => {
       const timer = setInterval(() => {
         setTimeLeft((prev) => {
           if (prev <= 1) {
-            handleSubmit();
+            handleAutoSubmit({ navigateToResult: true });
             return 0;
           }
           return prev - 1;
@@ -80,7 +80,7 @@ const TakeQuiz = () => {
       if (isSubmittingRef.current) return;
       e.preventDefault();
       e.returnValue = 'Your quiz progress will be automatically submitted if you leave. Are you sure?';
-      handleAutoSubmit();
+      handleAutoSubmit({ useBeacon: true });
       return e.returnValue;
     };
 
@@ -134,9 +134,7 @@ const TakeQuiz = () => {
     
     if (currentWarnings >= 2) {
       alert("You have exceeded the maximum number of warnings (3). Your quiz is being automatically submitted.");
-      handleAutoSubmit().then(() => {
-        navigate('/results', { replace: true });
-      });
+      handleAutoSubmit({ navigateToResult: true });
       return;
     }
     
@@ -246,18 +244,32 @@ const TakeQuiz = () => {
     }
   };
 
-  const handleAutoSubmit = async () => {
+  const handleAutoSubmit = async ({ useBeacon = false, navigateToResult = false } = {}) => {
     if (isSubmittingRef.current) return;
     isSubmittingRef.current = true;
 
     try {
       const timeTaken = Math.floor((Date.now() - startTime) / 1000);
-      const data = JSON.stringify({
+      const payload = {
         quizId: id,
         answers: answers,
         timetaken: timeTaken,
         contestId: contestId || null,
-      });
+      };
+
+      if (!useBeacon) {
+        const response = await resultAPI.submit(payload);
+        if (navigateToResult) {
+          if (response?.data?.result?.id) {
+            navigate(`/result/${response.data.result.id}`, { replace: true });
+          } else {
+            navigate('/results', { replace: true });
+          }
+        }
+        return;
+      }
+
+      const data = JSON.stringify(payload);
 
       const token = localStorage.getItem('token');
       const blob = new Blob([data], { type: 'application/json' });
@@ -273,15 +285,13 @@ const TakeQuiz = () => {
       }
     } catch (err) {
       console.error('Auto-submit failed:', err);
+      isSubmittingRef.current = false;
     }
   };
 
   const handleConfirmLeave = async () => {
     setShowLeaveConfirm(false);
-    await handleAutoSubmit();
-    setTimeout(() => {
-      navigate(-1);
-    }, 100);
+    await handleAutoSubmit({ navigateToResult: true });
   };
 
   const handleCancelLeave = () => {

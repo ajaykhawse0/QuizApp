@@ -8,16 +8,24 @@ const ResultsList = () => {
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalResults, setTotalResults] = useState(0);
+
+  const PAGE_SIZE = 10;
 
   useEffect(() => {
-    fetchResults();
-  }, []);
+    fetchResults(page);
+  }, [page]);
 
-  const fetchResults = async () => {
+  const fetchResults = async (currentPage) => {
     try {
       setLoading(true);
-      const response = await resultAPI.getUserResults();
+      const response = await resultAPI.getUserResults({ page: currentPage, limit: PAGE_SIZE });
       setResults(response.data.resultList || []);
+      const pagination = response.data.pagination || {};
+      setTotalPages(pagination.totalPages || 1);
+      setTotalResults(pagination.totalResults || 0);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load results');
     } finally {
@@ -70,6 +78,9 @@ const ResultsList = () => {
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white mb-2">My History</h1>
           <p className="text-gray-500 dark:text-gray-400">Review your past quiz attempts and track your progress.</p>
+          {totalResults > 0 && (
+            <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Showing newest to oldest</p>
+          )}
         </div>
       </div>
 
@@ -137,6 +148,32 @@ const ResultsList = () => {
               </div>
             </Link>
           ))}
+        </div>
+      )}
+
+      {results.length > 0 && totalPages > 1 && (
+        <div className="mt-8 flex items-center justify-between gap-4 border-t border-gray-200 dark:border-gray-800 pt-6">
+          <button
+            type="button"
+            onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+            disabled={page === 1}
+            className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+          >
+            Previous
+          </button>
+
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Page {page} of {totalPages}
+          </p>
+
+          <button
+            type="button"
+            onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))}
+            disabled={page === totalPages}
+            className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+          >
+            Next
+          </button>
         </div>
       )}
     </div>
