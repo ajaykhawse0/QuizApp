@@ -6,24 +6,77 @@ import { Trophy, Clock, Medal, Target, ChevronLeft } from 'lucide-react';
 
 const Leaderboard = () => {
   const { quizId } = useParams();
+  const ITEMS_PER_PAGE = 10;
   const [leaderboard, setLeaderboard] = useState([]);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: ITEMS_PER_PAGE,
+    totalResults: 0,
+    totalPages: 0,
+    hasNextPage: false,
+    hasPrevPage: false,
+  });
+  const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
     fetchLeaderboard();
+  }, [quizId, currentPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
   }, [quizId]);
 
   const fetchLeaderboard = async () => {
     try {
       setLoading(true);
-      const response = await resultAPI.getLeaderboard(quizId);
+      const response = await resultAPI.getLeaderboard(quizId, {
+        page: currentPage,
+        limit: ITEMS_PER_PAGE,
+      });
       setLeaderboard(response.data.leaderboard || []);
+      setPagination(response.data.pagination || {
+        page: currentPage,
+        limit: ITEMS_PER_PAGE,
+        totalResults: 0,
+        totalPages: 0,
+        hasNextPage: false,
+        hasPrevPage: false,
+      });
+      setError('');
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load leaderboard');
+      setLeaderboard([]);
     } finally {
       setLoading(false);
     }
+  };
+
+  const onPageChange = (page) => {
+    if (page >= 1 && page <= Math.max(pagination.totalPages, 1) && page !== currentPage) {
+      setCurrentPage(page);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const getVisiblePages = () => {
+    const totalPages = pagination.totalPages;
+
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+
+    const pages = [1];
+    const start = Math.max(2, currentPage - 1);
+    const end = Math.min(totalPages - 1, currentPage + 1);
+
+    if (start > 2) pages.push('left-ellipsis');
+    for (let page = start; page <= end; page += 1) pages.push(page);
+    if (end < totalPages - 1) pages.push('right-ellipsis');
+
+    pages.push(totalPages);
+    return pages;
   };
 
   const formatTime = (seconds) => {
@@ -50,9 +103,9 @@ const Leaderboard = () => {
     );
   }
 
-  // Separate top 3 for podium
-  const top3 = leaderboard.slice(0, 3);
-  const others = leaderboard.slice(3);
+  // Show podium only on first page so absolute rank ordering stays meaningful.
+  const top3 = currentPage === 1 ? leaderboard.slice(0, 3) : [];
+  const others = currentPage === 1 ? leaderboard.slice(3) : leaderboard;
 
   // Reorder top3 for podium visual: 2nd, 1st, 3rd
   const podiumOrder = [];
@@ -63,11 +116,6 @@ const Leaderboard = () => {
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
       
-      {/* Header */}
-      <div className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-gray-200 dark:border-gray-800 pb-6 hidden">
-        {/* We can hide it or keep it depending on layout, let's keep it visible */}
-      </div>
-
       <div className="text-center mb-12">
         <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 dark:text-white mb-4 tracking-tight">Leaderboard</h1>
         <p className="text-gray-500 dark:text-gray-400 max-w-xl mx-auto text-lg mb-6">See how you stack up against the best performers in this quiz.</p>
@@ -90,8 +138,9 @@ const Leaderboard = () => {
       ) : (
         <>
           {/* Podium for Top 3 */}
-          <div className="flex flex-col sm:flex-row justify-center items-end gap-4 sm:gap-6 mb-16 pt-8">
-            {podiumOrder.map((entry) => {
+          {currentPage === 1 && podiumOrder.length > 0 && (
+            <div className="flex flex-col sm:flex-row justify-center items-end gap-4 sm:gap-6 mb-16 pt-8">
+              {podiumOrder.map((entry) => {
               const isFirst = entry.rank === 1;
               const isSecond = entry.rank === 2;
               
@@ -104,31 +153,32 @@ const Leaderboard = () => {
               
               const orderClass = entry.position === 'center' ? 'order-1 sm:order-2 z-10' : entry.position === 'left' ? 'order-2 sm:order-1' : 'order-3 sm:order-3';
 
-              return (
-                <div key={`podium-${entry.rank}`} className={`flex flex-col items-center w-full sm:w-1/3 max-w-[220px] ${orderClass} transform transition-transform hover:-translate-y-2`}>
+                return (
+                  <div key={`podium-${entry.rank}`} className={`flex flex-col items-center w-full sm:w-1/3 max-w-[220px] ${orderClass} transform transition-transform hover:-translate-y-2`}>
                   
-                  {isFirst && (
-                    <div className="mb-4 animate-bounce">
-                      <Trophy className="w-12 h-12 text-amber-500 filter drop-shadow-md" />
-                    </div>
-                  )}
+                    {isFirst && (
+                      <div className="mb-4 animate-bounce">
+                        <Trophy className="w-12 h-12 text-amber-500 filter drop-shadow-md" />
+                      </div>
+                    )}
 
-                  <div className="text-center w-full mb-3 px-2">
-                    <h3 className="font-bold text-gray-900 dark:text-white truncate text-lg">{entry.username}</h3>
-                    <div className="text-sm font-semibold text-primary-600 dark:text-primary-400">{entry.score} pts</div>
-                  </div>
+                    <div className="text-center w-full mb-3 px-2">
+                      <h3 className="font-bold text-gray-900 dark:text-white truncate text-lg">{entry.username}</h3>
+                      <div className="text-sm font-semibold text-primary-600 dark:text-primary-400">{entry.score} pts</div>
+                    </div>
 
-                  <div className={`w-full ${heightClass} bg-gradient-to-b ${colorClass} rounded-t-2xl shadow-lg border-t-2 flex flex-col items-center justify-start pt-6 relative overflow-hidden`}>
-                    <div className="absolute inset-0 bg-white opacity-10 mix-blend-overlay"></div>
-                    <span className="text-5xl font-black opacity-90 drop-shadow-md">{entry.rank}</span>
-                    <div className="mt-auto pb-4 w-full bg-black/10 backdrop-blur-sm text-center py-2 text-sm font-medium">
-                      {formatTime(entry.timeTaken)}
+                    <div className={`w-full ${heightClass} bg-gradient-to-b ${colorClass} rounded-t-2xl shadow-lg border-t-2 flex flex-col items-center justify-start pt-6 relative overflow-hidden`}>
+                      <div className="absolute inset-0 bg-white opacity-10 mix-blend-overlay"></div>
+                      <span className="text-5xl font-black opacity-90 drop-shadow-md">{entry.rank}</span>
+                      <div className="mt-auto pb-4 w-full bg-black/10 backdrop-blur-sm text-center py-2 text-sm font-medium">
+                        {formatTime(entry.timeTaken)}
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
 
           {/* Table for Remaining */}
           {others.length > 0 && (
@@ -146,7 +196,7 @@ const Leaderboard = () => {
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-800 text-sm">
                     {others.map((entry, index) => {
-                      const actualRank = index + 4;
+                      const actualRank = entry.rank || (currentPage === 1 ? index + 4 : index + 1 + (currentPage - 1) * ITEMS_PER_PAGE);
                       return (
                         <tr key={`rank-${actualRank}`} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
                           <td className="px-6 py-5 text-center font-bold text-gray-400 dark:text-gray-600">
@@ -176,6 +226,62 @@ const Leaderboard = () => {
                     })}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          )}
+
+          {pagination.totalPages > 1 && (
+            <div className="mt-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Showing page {pagination.page} of {pagination.totalPages} ({pagination.totalResults} players)
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => onPageChange(currentPage - 1)}
+                  disabled={!pagination.hasPrevPage}
+                  className="px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-800"
+                >
+                  Previous
+                </button>
+                <div className="flex items-center gap-1 flex-wrap">
+                  {getVisiblePages().map((pageItem) => {
+                    if (typeof pageItem !== 'number') {
+                      return (
+                        <span
+                          key={pageItem}
+                          className="px-2 text-sm text-gray-500 dark:text-gray-400"
+                        >
+                          ...
+                        </span>
+                      );
+                    }
+
+                    const isActive = pageItem === currentPage;
+                    return (
+                      <button
+                        key={pageItem}
+                        type="button"
+                        onClick={() => onPageChange(pageItem)}
+                        className={`min-w-9 h-9 px-2 rounded-lg text-sm font-semibold border transition-colors ${
+                          isActive
+                            ? 'bg-primary-600 border-primary-600 text-white dark:bg-primary-500 dark:border-primary-500'
+                            : 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800'
+                        }`}
+                      >
+                        {pageItem}
+                      </button>
+                    );
+                  })}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onPageChange(currentPage + 1)}
+                  disabled={!pagination.hasNextPage}
+                  className="px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-700 dark:text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 dark:hover:bg-gray-800"
+                >
+                  Next
+                </button>
               </div>
             </div>
           )}

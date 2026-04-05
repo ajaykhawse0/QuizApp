@@ -231,6 +231,9 @@ async function handleJoinContest(req, res) {
 async function handleGetContestLeaderboard(req, res) {
   try {
     const { id } = req.params;
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const limit = Math.max(parseInt(req.query.limit, 10) || 10, 1);
+    const skip = (page - 1) * limit;
 
     const contest = await Contest.findById(id).populate(
       "participants.user",
@@ -242,7 +245,7 @@ async function handleGetContestLeaderboard(req, res) {
     }
 
     // Sort participants by score (desc) and completion time (asc)
-    const leaderboard = contest.participants
+    const rankedParticipants = contest.participants
       .filter((p) => p.hasCompleted)
       .sort((a, b) => {
         if (b.score !== a.score) return b.score - a.score;
@@ -260,15 +263,26 @@ async function handleGetContestLeaderboard(req, res) {
         joinedAt: p.joinedAt,
       }));
 
+    const totalResults = rankedParticipants.length;
+    const leaderboard = rankedParticipants.slice(skip, skip + limit);
+
     return res.status(200).json({
       contest: {
         id: contest._id,
         title: contest.title,
         status: contest.status,
         totalParticipants: contest.participantCount,
-        completedParticipants: leaderboard.length,
+        completedParticipants: totalResults,
       },
       leaderboard,
+      pagination: {
+        page,
+        limit,
+        totalResults,
+        totalPages: Math.ceil(totalResults / limit),
+        hasNextPage: page * limit < totalResults,
+        hasPrevPage: page > 1,
+      },
     });
   } catch (err) {
     console.error("Error fetching leaderboard:", err);

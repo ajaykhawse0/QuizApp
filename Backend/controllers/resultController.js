@@ -172,28 +172,38 @@ async function handleGetResultsByUser(req,res){
 
 async function leaderboard(req,res){
     const quizId = req.params.quizId;
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const limit = Math.max(parseInt(req.query.limit, 10) || 10, 1);
+    const skip = (page - 1) * limit;
 
     try{
-        const results = await Result.find({quizId});
-      
-        
-        results.sort((a,b) => a.score===b.score?a.timeTaken-b.timeTaken:b.score-a.score);
-        
+        const results = await Result.find({quizId})
+            .populate('userId', 'name')
+            .sort({ score: -1, timeTaken: 1, submittedAt: -1 });
 
-        const topResults = results.slice(0,10);
-        const leaderboard = await Promise.all(
-            topResults.map(async(result)=>{
-                const user = await User.findById(result.userId);
-                return{
-                    username: user?.name,
-                    score: result.score,
-                    total: result.total,
-                    percentage: result.percentage,
-                    timeTaken: result.timeTaken,
-                };
-            }));
+        const totalResults = results.length;
+        const paginatedResults = results.slice(skip, skip + limit);
 
-        return res.status(200).json({leaderboard});
+        const leaderboard = paginatedResults.map((result, index) => ({
+            rank: skip + index + 1,
+            username: result.userId?.name || 'Unknown User',
+            score: result.score,
+            total: result.total,
+            percentage: result.percentage,
+            timeTaken: result.timeTaken,
+        }));
+
+        return res.status(200).json({
+            leaderboard,
+            pagination: {
+                page,
+                limit,
+                totalResults,
+                totalPages: Math.ceil(totalResults / limit),
+                hasNextPage: page * limit < totalResults,
+                hasPrevPage: page > 1,
+            },
+        });
     }
     catch(err){
         console.error("Error fetching leaderboard:", err);  

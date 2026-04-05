@@ -82,7 +82,7 @@ export const resultAPI = {
   getById: (id) => api.get(`/result/${id}`),
   getByQuiz: (quizId, params) => api.get(`/result/quiz/${quizId}`, { params }),
   getQuizStatistics: (quizId) => api.get(`/result/quiz/${quizId}/statistics`),
-  getLeaderboard: (quizId) => api.get(`/result/leaderboard/${quizId}`),
+  getLeaderboard: (quizId, params) => api.get(`/result/leaderboard/${quizId}`, { params }),
   getAll: (params) => api.get('/result/admin/all', { params }),
   delete: (id) => api.delete(`/result/${id}`),
 };
@@ -104,7 +104,7 @@ export const contestAPI = {
   getById: (id) => api.get(`/contests/contest/${id}`),
   create: (data) => api.post('/contests/create', data),
   join: (id) => api.post(`/contests/${id}/join`),
-  getLeaderboard: (id) => api.get(`/contests/${id}/leaderboard`),
+  getLeaderboard: (id, params) => api.get(`/contests/${id}/leaderboard`, { params }),
   getMyContests: () => api.get('/contests/my-contests'),
   update: (id, data) => api.put(`/contests/${id}`, data),
   delete: (id) => api.delete(`/contests/${id}`),
