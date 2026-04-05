@@ -42,6 +42,7 @@ api.interceptors.response.use(
  if (error.response?.status === 401) {
   const requestUrl = error.config?.url || '';
   const currentPath = window.location.pathname;
+  const token = localStorage.getItem('token');
 
   const isPublicAuthRequest =
     requestUrl.includes('/auth/login') ||
@@ -49,7 +50,12 @@ api.interceptors.response.use(
     requestUrl.includes('/auth/forgot-password') ||
     requestUrl.includes('/auth/forgot-password/reset-password');
 
-  if (!currentPath.includes('/login') && !isPublicAuthRequest) {
+  const isPublicAuthPage =
+    currentPath.includes('/login') ||
+    currentPath.includes('/signup') ||
+    currentPath.includes('/reset-password/');
+
+  if (token && !isPublicAuthPage && !isPublicAuthRequest) {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     window.location.href = '/login';
