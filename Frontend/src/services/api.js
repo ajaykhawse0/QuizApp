@@ -40,8 +40,16 @@ api.interceptors.response.use(
     }
     
  if (error.response?.status === 401) {
+  const requestUrl = error.config?.url || '';
   const currentPath = window.location.pathname;
-  if (!currentPath.includes('/login')) {
+
+  const isPublicAuthRequest =
+    requestUrl.includes('/auth/login') ||
+    requestUrl.includes('/auth/createaccount') ||
+    requestUrl.includes('/auth/forgot-password') ||
+    requestUrl.includes('/auth/forgot-password/reset-password');
+
+  if (!currentPath.includes('/login') && !isPublicAuthRequest) {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     window.location.href = '/login';
