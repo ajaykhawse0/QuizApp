@@ -21,6 +21,7 @@ const GoogleLoginButton = () => {
         cursor: "pointer",
         marginTop: "10px",
         fontSize: "16px",
+        color: "#000000",
       }}
     >
       <img
