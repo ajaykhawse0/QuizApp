@@ -179,36 +179,53 @@ async function handleJoinContest(req, res) {
     const { id } = req.params;
     const userId = req.user._id;
 
-    const contest = await Contest.findById(id);
-    if (!contest) {
-      return res.status(404).json({ message: "Contest not found" });
-    }
-
-    
-    contest.updateStatus();
-
-    // Check if contest is live or upcoming
-    if (contest.status === "completed") {
-      return res.status(400).json({ message: "Contest has ended" });
-    }
-
-    // Check if already joined
-    if (contest.hasUserJoined(userId)) {
-      return res.status(400).json({ message: "Already joined this contest" });
-    }
-
-    // Check if full
-    if (contest.isFull()) {
-      return res.status(400).json({ message: "Contest is full" });
-    }
-
-    // Add participant
-    contest.participants.push({
+    const now = new Date();
+    const participantDoc = {
       user: userId,
-      joinedAt: new Date(),
-    });
+      joinedAt: now,
+    };
 
-    await contest.save();
+    const query = {
+      _id: id,
+      endTime: { $gt: now },
+      "participants.user": { $ne: userId },
+      $or: [
+        { maxParticipants: null },
+        { $expr: { $gt: ["$maxParticipants", { $size: "$participants" }] } },
+      ],
+    };
+
+    const contest = await Contest.findOneAndUpdate(
+      query,
+      { $push: { participants: participantDoc } },
+      { new: true }
+    );
+
+    if (!contest) {
+      const existingContest = await Contest.findById(id);
+      if (!existingContest) {
+        return res.status(404).json({ message: "Contest not found" });
+      }
+
+      existingContest.updateStatus();
+
+      if (existingContest.endTime <= now || existingContest.status === "completed") {
+        return res.status(400).json({ message: "Contest has ended" });
+      }
+
+      const alreadyJoined = existingContest.participants.some(
+        (p) => p.user.toString() === userId.toString()
+      );
+      if (alreadyJoined) {
+        return res.status(400).json({ message: "Already joined this contest" });
+      }
+
+      if (existingContest.isFull()) {
+        return res.status(400).json({ message: "Contest is full" });
+      }
+
+      return res.status(409).json({ message: "Unable to join contest right now. Please retry." });
+    }
 
     // Invalidate contest caches (list, specific contest, leaderboard, my-contests)
     await invalidateCache('cache:public:/api/contests*');

@@ -170,9 +170,23 @@ REDIS_HOST=localhost
 REDIS_PORT=6379
 REDIS_PASSWORD=
 
+# Optional keep-alive ping (helps on free-tier cold starts)
+# Point this to your deployed backend health endpoint
+KEEP_ALIVE_URL=https://your-render-service.onrender.com/api/health
+# Defaults to 14 minutes if omitted
+KEEP_ALIVE_INTERVAL_MS=840000
+
 # Server
 
 ```
+
+### Render Free Tier Cold-Start Mitigation
+
+- The backend now exposes `GET /api/health` and supports optional internal keep-alive pings.
+- For better reliability during contests, also configure an external uptime monitor (for example UptimeRobot or cron-job.org) to hit:
+   - `https://your-render-service.onrender.com/api/health`
+- Recommended ping interval: every 10 to 14 minutes.
+- Start monitoring at least 15 to 20 minutes before contest start time.
 
 #### Frontend `.env`
 Create a `.env` file in the `Frontend` directory:

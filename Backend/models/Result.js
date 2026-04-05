@@ -49,7 +49,8 @@ const resultSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-resultSchema.index({ user: 1, quiz: 1, completedAt: -1 });
+resultSchema.index({ userId: 1, quizId: 1, completedAt: -1 });
+resultSchema.index({ quizId: 1, score: -1, timeTaken: 1, submittedAt: -1 });
 
 const Result = mongoose.model("Result", resultSchema);
 module.exports=Result;
