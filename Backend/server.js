@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const session = require("express-session");
+const MongoStore = require("connect-mongo");
 const passport = require("passport");
 const { rateLimit } = require("express-rate-limit");
 const dotenv = require("dotenv");
@@ -90,9 +91,15 @@ app.use(cookieParser());
  */
 app.use(
   session({
-    secret: process.env.SESSION_SECRET,
+    secret: process.env.SESSION_SECRET || process.env.JWT_SECRET,
     resave: false,
     saveUninitialized: false,
+    store: MongoStore.create({
+      mongoUrl: process.env.MONGO_URI,
+      collectionName: "sessions",
+      ttl: 14 * 24 * 60 * 60,
+      autoRemove: "native",
+    }),
     cookie: {
       secure: process.env.NODE_ENV === "production",
       httpOnly: true,
