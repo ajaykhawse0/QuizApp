@@ -59,7 +59,7 @@ const UpdateQuiz = () => {
         setFormData(quizData);
       } catch (err) {
         console.error("Error fetching quiz:", err);
-        setError("Failed to load quiz details.");
+        setError(err.response?.data?.message || "Failed to load quiz details.");
       } finally {
         setLoading(false);
       }

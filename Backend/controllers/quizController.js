@@ -396,13 +396,15 @@ async function handleGetQuizById(req, res) {
       title: quiz.title,
       difficulty: quiz.difficulty,
 
-      category: quiz.category?._id || "NULL",
+      category: quiz.category ? quiz.category.toString() : "",
       timeLimit: quiz.timeLimit,
       questionCount: quiz.questions.length,
       createdBy: quiz.createdBy?.name || "Admin",
       questions: quiz.questions.map((q) => ({
         question: q.question,
         options: q.options,
+        correctAnswer: q.correctAnswer,
+        explanation: q.explanation || "",
       })),
       isPublished: quiz.isPublished,
     };

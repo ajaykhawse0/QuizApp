@@ -10,6 +10,11 @@ async function checkQuizEligibility(req, res, next) {
     const quizId = req.params.id;
     const userId = req.user._id;
 
+    // Admins/Superadmins need unrestricted access for quiz management flows.
+    if (req.user?.role === 'admin' || req.user?.role === 'superadmin') {
+      return next();
+    }
+
     // Find the last attempt for this user and quiz
     const lastAttempt = await Result.findOne({
       userId: userId,
