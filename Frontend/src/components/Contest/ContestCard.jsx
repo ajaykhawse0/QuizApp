@@ -132,6 +132,27 @@ const ContestCard = ({ contest, onJoin }) => {
             {contest?.isFull ? 'Full' : 'Join Now'}
           </button>
         )}
+
+        {!isAdmin && contest?.hasJoined && !contest?.hasCompleted && contest?.status === 'live' && (
+          <Link
+            to={`/quiz/${contest?.quiz?.id || contest?.quiz?._id}?contestId=${contestId}`}
+            className="flex-1 min-w-[120px] px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold transition-all shadow-sm hover:shadow-md text-center"
+          >
+            Enter Contest
+          </Link>
+        )}
+
+        {!isAdmin && contest?.hasJoined && !contest?.hasCompleted && contest?.status === 'upcoming' && (
+          <div className="flex-1 min-w-[120px] px-4 py-2.5 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-xl text-sm font-bold text-center border border-blue-200 dark:border-blue-800">
+            Joined - Starts Soon
+          </div>
+        )}
+
+        {!isAdmin && contest?.hasCompleted && (
+          <div className="flex-1 min-w-[120px] px-4 py-2.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 rounded-xl text-sm font-bold text-center border border-emerald-200 dark:border-emerald-800">
+            Completed
+          </div>
+        )}
         
         {isAdmin && (
           <button

@@ -1,17 +1,28 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { contestAPI } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import LoadingSpinner from '../Common/LoadingSpinner';
 import { Trophy, Users, Clock, Play, Calendar, ArrowLeft, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const ContestDetail = () => {
   const { id } = useParams();
+  const { isAdmin } = useAuth();
   const [contest, setContest] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showParticipants, setShowParticipants] = useState(false);
 
   useEffect(() => {
     fetchContest();
+  }, [id]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchContest();
+    }, 15000);
+
+    return () => clearInterval(interval);
   }, [id]);
 
   const fetchContest = async () => {
@@ -204,8 +215,19 @@ const ContestDetail = () => {
               <Users className="w-5 h-5 opacity-70" />
               View Leaderboard
             </Link>
+
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => setShowParticipants((prev) => !prev)}
+                className="flex-1 px-8 py-4 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-900/20 dark:hover:bg-indigo-900/40 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 rounded-2xl text-center font-bold transition-all shadow-sm hover:shadow-md flex items-center justify-center gap-2"
+              >
+                <Users className="w-5 h-5" />
+                {showParticipants ? 'Hide Participants' : 'View Participants'}
+              </button>
+            )}
             
-            {!contest.hasJoined && contest.status !== 'completed' && (
+            {!isAdmin && !contest.hasJoined && contest.status !== 'completed' && (
               <button
                 onClick={handleJoin}
                 disabled={contest.isFull}
@@ -215,7 +237,7 @@ const ContestDetail = () => {
               </button>
             )}
             
-            {contest.hasJoined && !contest.hasCompleted && contest.status === 'live' && (
+            {!isAdmin && contest.hasJoined && !contest.hasCompleted && contest.status === 'live' && (
               <Link
                 to={`/quiz/${contest.quiz?.id || contest.quiz?._id}?contestId=${contest.id}`}
                 className="flex-[2] px-8 py-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl text-center font-bold flex items-center justify-center gap-3 transition-all shadow-md hover:shadow-lg hover:shadow-emerald-500/20 active:scale-[0.98] text-lg"
@@ -227,13 +249,50 @@ const ContestDetail = () => {
               </Link>
             )}
 
-            {contest.hasCompleted && (
+            {!isAdmin && contest.hasCompleted && (
               <div className="flex-[2] px-8 py-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 rounded-2xl text-center font-bold flex items-center justify-center gap-2 shadow-sm">
                 <CheckCircle2 className="w-6 h-6" />
                 You have completed this contest
               </div>
             )}
           </div>
+
+          {isAdmin && showParticipants && (
+            <div className="mt-6 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden">
+              <div className="px-5 py-4 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Participants</h3>
+                <span className="text-sm text-gray-500 dark:text-gray-400">{contest.participants?.length || 0} total</span>
+              </div>
+
+              {!contest.participants || contest.participants.length === 0 ? (
+                <div className="px-5 py-8 text-center text-gray-500 dark:text-gray-400">No participants yet.</div>
+              ) : (
+                <div className="max-h-80 overflow-y-auto">
+                  {contest.participants.map((participant, idx) => (
+                    <div
+                      key={participant.id || `${participant.name}-${idx}`}
+                      className="px-5 py-3 border-b border-gray-100 dark:border-gray-800 last:border-b-0 flex items-center justify-between"
+                    >
+                      <div>
+                        <p className="font-semibold text-gray-900 dark:text-white">{participant.name}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Joined: {participant.joinedAt ? new Date(participant.joinedAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'N/A'}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className={`text-xs font-bold ${participant.hasCompleted ? 'text-emerald-600 dark:text-emerald-400' : 'text-blue-600 dark:text-blue-400'}`}>
+                          {participant.hasCompleted ? 'Completed' : 'Joined'}
+                        </p>
+                        {participant.hasCompleted && (
+                          <p className="text-xs text-gray-500 dark:text-gray-400">Score: {participant.score}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

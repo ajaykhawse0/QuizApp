@@ -13,6 +13,14 @@ const ContestList = () => {
     fetchContests();
   }, [filter]);
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchContests();
+    }, 15000);
+
+    return () => clearInterval(interval);
+  }, [filter]);
+
   const fetchContests = async () => {
     try {
       setLoading(true);

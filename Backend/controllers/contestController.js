@@ -68,6 +68,8 @@ async function handleGetAllContests(req, res) {
   try {
     const { status, page = 1, limit = 10 } = req.query;
     const skip = (page - 1) * limit;
+    const userId = req.user?._id;
+    const isAdmin = req.user?.role === "admin" || req.user?.role === "superadmin";
 
     // Update contest statuses
     await Contest.updateAllStatuses();
@@ -85,20 +87,28 @@ async function handleGetAllContests(req, res) {
       Contest.countDocuments(filter),
     ]);
 
-    const contestList = contests.map((contest) => ({
-      id: contest._id,
-      title: contest.title,
-      description: contest.description,
-      quiz: contest.quiz,
-      startTime: contest.startTime,
-      endTime: contest.endTime,
-      status: contest.status,
-      participantCount: contest.participantCount,
-      maxParticipants: contest.maxParticipants,
-      isFull: contest.isFull(),
-      prizeInfo: contest.prizeInfo,
-      createdBy: contest.createdBy?.name || "Admin",
-    }));
+    const contestList = contests.map((contest) => {
+      const participant = !isAdmin && userId
+        ? contest.participants.find((p) => p.user.toString() === userId.toString())
+        : null;
+
+      return {
+        id: contest._id,
+        title: contest.title,
+        description: contest.description,
+        quiz: contest.quiz,
+        startTime: contest.startTime,
+        endTime: contest.endTime,
+        status: contest.status,
+        participantCount: contest.participantCount,
+        maxParticipants: contest.maxParticipants,
+        isFull: contest.isFull(),
+        prizeInfo: contest.prizeInfo,
+        createdBy: contest.createdBy?.name || "Admin",
+        hasJoined: !!participant,
+        hasCompleted: participant?.hasCompleted || false,
+      };
+    });
 
     return res.status(200).json({
       contests: contestList,
@@ -142,6 +152,8 @@ async function handleGetContestById(req, res) {
       await Contest.updateOne({ _id: id }, { $set: { status: contest.status } });
     }
 
+    const isAdmin = req.user?.role === "admin" || req.user?.role === "superadmin";
+
     const hasJoined = contest.participants.some(
       (p) => p.user._id.toString() === userId.toString()
     );
@@ -149,24 +161,36 @@ async function handleGetContestById(req, res) {
       (p) => p.user._id.toString() === userId.toString()
     );
 
-    return res.status(200).json({
-      contest: {
-        id: contest._id,
-        title: contest.title,
-        description: contest.description,
-        quiz: contest.quiz,
-        startTime: contest.startTime,
-        endTime: contest.endTime,
-        status: contest.status,
-        participantCount: contest.participantCount,
-        maxParticipants: contest.maxParticipants,
-        isFull: contest.isFull(),
-        prizeInfo: contest.prizeInfo,
-        hasJoined,
-        hasCompleted: userParticipant?.hasCompleted || false,
-        createdBy: contest.createdBy?.name || "Admin",
-      },
-    });
+    const contestData = {
+      id: contest._id,
+      title: contest.title,
+      description: contest.description,
+      quiz: contest.quiz,
+      startTime: contest.startTime,
+      endTime: contest.endTime,
+      status: contest.status,
+      participantCount: contest.participantCount,
+      maxParticipants: contest.maxParticipants,
+      isFull: contest.isFull(),
+      prizeInfo: contest.prizeInfo,
+      hasJoined,
+      hasCompleted: userParticipant?.hasCompleted || false,
+      createdBy: contest.createdBy?.name || "Admin",
+    };
+
+    if (isAdmin) {
+      contestData.participants = contest.participants.map((p) => ({
+        id: p.user?._id,
+        name: p.user?.name || "Unknown",
+        profilePicture: p.user?.profilePicture || null,
+        joinedAt: p.joinedAt,
+        hasCompleted: p.hasCompleted,
+        score: p.score,
+        completedAt: p.completedAt,
+      }));
+    }
+
+    return res.status(200).json({ contest: contestData });
   } catch (err) {
     console.error("Error fetching contest:", err);
     return res.status(500).json({ message: "Internal server error" });
